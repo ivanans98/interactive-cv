@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fleet Data Analyzer</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Fleet Data Analyzer</h1>
+    <p style="color:#8a90a6;margin-top:-2px">Pick a saved dataset or toggle <em>Simulate</em> to generate synthetic data in the browser.</p>
+
+    <section class="controls">
+      <label>Dataset
+        <select id="dataset">
+          <option value="data/fleet_demo_small.csv">fleet_demo_small.csv</option>
+          <option value="data/fleet_demo_week.csv">fleet_demo_week.csv</option>
+        </select>
+      </label>
+
+      <label><input type="checkbox" id="simulate"> Simulate</label>
+
+      <label>Vehicles
+        <input type="number" id="fleet" value="5" min="1" max="50" />
+      </label>
+      <label>Minutes
+        <input type="number" id="mins" value="120" min="10" max="1440" />
+      </label>
+      <label>Noise
+        <input type="number" id="noise" value="0.8" step="0.1" min="0" max="3" />
+      </label>
+
+      <button id="run">Run</button>
+    </section>
+
+    <section id="kpis" class="kpis"></section>
+
+    <section class="chart">
+      <div id="plot1"></div>
+      <div id="plot2" style="margin-top:16px"></div>
+    </section>
+
+    <footer>Built with PyScript (pandas + matplotlib) and runs fully in your browser.</footer>
+  </main>
+
+  <py-config>
+    packages = ["pandas", "matplotlib"]
+  </py-config>
+
+  <py-script>
+from js import document
+import pandas as pd
+import random
+from datetime import datetime, timedelta
+import matplotlib
+matplotlib.use("AGG")
+import matplotlib.pyplot as plt
+from io import BytesIO
+import base64
+
+def kpi_card(label, value):
+    return f'<div class="kpi"><div class="label">{label}</div><div class="value">{value}</div></div>'
+
+def img_from_fig(fig, dpi=110):
+    buf = BytesIO()
+    fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+    return f'<img src="data:image/png;base64,{b64}"/>'
+
+def simulate(fleet=5, minutes=120, noise=0.8):
+    start = datetime.now().replace(second=0, microsecond=0)
+    rows = []
+    speeds = [max(0.0, random.gauss(30, 5)) for _ in range(fleet)]
+    dists  = [0.0]*fleet
+    bats   = [100.0]*fleet
+    temps  = [random.uniform(20, 28) for _ in range(fleet)]
+    for m in range(minutes):
+        t = start + timedelta(minutes=m)
+        for vid in range(1, fleet+1):
+            i = vid-1
+            # random walk speed (km/h)
+            speeds[i] = max(0.0, speeds[i] + random.gauss(0, 2*noise))
+            speeds[i] = min(speeds[i], 110.0)
+            # distance (km)
+            dists[i] += speeds[i] / 60.0
+            # battery drain (simple model)
+            drain = 0.02 + 0.0008*speeds[i]  # per minute
+            bats[i] = max(0.0, bats[i] - drain)
+            # temp
+            temps[i] += random.gauss(0, 0.03 + 0.02*noise)
+            rows.append({
+                "timestamp": t.isoformat(),
+                "vehicle_id": f"V{vid}",
+                "speed_kmh": speeds[i],
+                "dist_km": dists[i],
+                "battery_pct": bats[i],
+                "temp_c": temps[i]
+            })
+    return pd.DataFrame(rows)
+
+def load_csv(path):
+    return pd.read_csv(path)
+
+def compute_kpis(df):
+    trips = df["vehicle_id"].nunique()
+    total_km = df.groupby("vehicle_id")["dist_km"].max().sum()
+    avg_speed = df["speed_kmh"].mean()
+    avg_bat = df["battery_pct"].mean()
+    return trips, total_km, avg_speed, avg_bat
+
+def plot_speed(df):
+    g = df.groupby("timestamp")["speed_kmh"].mean().reset_index()
+    fig, ax = plt.subplots(figsize=(9,3))
+    ax.plot(pd.to_datetime(g["timestamp"]), g["speed_kmh"])
+    ax.set_title("Average Speed (km/h)")
+    ax.set_xlabel("Time")
+    ax.set_ylabel("km/h")
+    fig.autofmt_xdate()
+    return img_from_fig(fig)
+
+def plot_battery(df):
+    g = df.groupby("timestamp")["battery_pct"].mean().reset_index()
+    fig, ax = plt.subplots(figsize=(9,3))
+    ax.plot(pd.to_datetime(g["timestamp"]), g["battery_pct"])
+    ax.set_title("Average Battery (%)")
+    ax.set_xlabel("Time")
+    ax.set_ylabel("%")
+    fig.autofmt_xdate()
+    return img_from_fig(fig)
+
+def run_app(event=None):
+    simulate_chk = bool(document.getElementById("simulate").checked)
+    fleet = int(document.getElementById("fleet").value)
+    mins  = int(document.getElementById("mins").value)
+    noise = float(document.getElementById("noise").value)
+    if simulate_chk:
+        df = simulate(fleet=fleet, minutes=mins, noise=noise)
+    else:
+        path = document.getElementById("dataset").value
+        df = load_csv(path)
+
+    trips, total_km, avg_speed, avg_bat = compute_kpis(df)
+    kpis_html = "".join([
+        kpi_card("Vehicles", trips),
+        kpi_card("Total km", f"{total_km:.1f}"),
+        kpi_card("Avg speed", f"{avg_speed:.1f} km/h"),
+        kpi_card("Avg battery", f"{avg_bat:.1f}%"),
+    ])
+    document.getElementById("kpis").innerHTML = kpis_html
+    document.getElementById("plot1").innerHTML = plot_speed(df)
+    document.getElementById("plot2").innerHTML = plot_battery(df)
+
+# wire button
+document.getElementById("run").addEventListener("click", run_app)
+  </py-script>
+</body>
+</html>
