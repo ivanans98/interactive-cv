@@ -46,19 +46,11 @@
     <footer>Built with PyScript (pandas + matplotlib).</footer>
   </main>
 
-  <script type="py-config">{ "packages": [] }</script>
-
+  <script type="py-config">
+    packages = ["pandas", "matplotlib"]
+  </script>
+  
   <script type="py">
-try:
-    # Use the JS global pyodide object
-    from js import pyodide as _pyodide
-    await _pyodide.loadPackage(["pandas", "matplotlib"])
-except Exception:
-    # Fallback via micropip if needed
-    import pyodide
-    await pyodide.loadPackage("micropip")
-    import micropip
-    await micropip.install(["pandas", "matplotlib"])
 
 from js import document
 from pyodide.http import open_url
