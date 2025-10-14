@@ -1,29 +1,18 @@
 @import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
 
+/* cozy rosy-cream theme */
 :root{
-  /* Base palette */
-  --bg:        #0f0b0d;   /* deep cocoa */
-  --panel:     #181216;   /* card bg */
-  --border:    #2a2126;
-  --fg:        #f4efee;   /* warm white */
-  --muted:     #cbbfc2;   /* soft taupe */
-  --accent:    #d77480;   /* rose */
-  --accent-2:  #b14b5e;   /* plum-rose */
-
-  /* Code highlight defaults (kept but softened) */
-  --sh-class:      #4c97f8;
-  --sh-identifier: #ffffff;
-  --sh-sign:       #cbbfc2;
-  --sh-string:     #0fa295;
-  --sh-keyword:    #f47067;
-  --sh-comment:    #a19595;
-  --sh-jsxliterals:#6266d1;
-  --sh-property:   #e25a1c;
-  --sh-entity:     #e25a1c;
+  --bg:       #f6ecea;   /* page bg (warm cream) */
+  --panel:    #fff7f6;   /* cards */
+  --border:   #ead4d1;
+  --fg:       #2a1b1f;   /* cocoa text */
+  --muted:    #7d5e65;   /* rose taupe */
+  --accent:   #d77480;   /* rose */
+  --accent-2: #b14b5e;   /* plum-rose */
 }
 
-html{ color-scheme: dark; min-width:360px; }
+html{ color-scheme: light; min-width:360px; }
 body{
   background: var(--bg);
   color: var(--fg);
@@ -32,25 +21,23 @@ body{
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Soft vignette / ambient glow */
+/* soft vignette / ambient glow for cozy vibe */
 body::before{
   content:"";
   position:fixed; inset:-12vmax;
   background:
-    radial-gradient(60% 60% at 50% 18%, rgba(215,116,128,.16), transparent 60%),
-    radial-gradient(38% 38% at 12% 88%, rgba(177,75,94,.10), transparent 60%);
-  filter: blur(34px);
+    radial-gradient(60% 60% at 50% 18%, rgba(215,116,128,.12), transparent 60%),
+    radial-gradient(38% 38% at 12% 88%, rgba(177,75,94,.08), transparent 60%);
+  filter: blur(28px);
   pointer-events:none; z-index:-1;
 }
 
-/* Cozy selection */
 ::selection{
-  background-color: rgba(215,116,128,.35);
+  background-color: rgba(215,116,128,.22);
   color: var(--fg);
 }
 
-/* Existing styles (adapted to theme) */
-
+/* existing prose styles */
 .prose .anchor{ @apply absolute invisible no-underline; margin-left:-1em; padding-right:.5em; width:80%; max-width:700px; cursor:pointer; }
 .anchor:hover{ @apply visible; }
 
@@ -96,7 +83,7 @@ table{ display:block; max-width:fit-content; overflow-x:auto; white-space:nowrap
 
 .title{ text-wrap: balance; }
 
-/* Helpful utilities for the cozy theme */
+/* ========= Cozy utilities ========= */
 .panel{
   background: var(--panel);
   border: 1px solid var(--border);
