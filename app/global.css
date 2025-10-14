@@ -1,150 +1,113 @@
 @import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
 
-::selection {
-  background-color: #47a3f3;
-  color: #fefefe;
+:root{
+  /* Base palette */
+  --bg:        #0f0b0d;   /* deep cocoa */
+  --panel:     #181216;   /* card bg */
+  --border:    #2a2126;
+  --fg:        #f4efee;   /* warm white */
+  --muted:     #cbbfc2;   /* soft taupe */
+  --accent:    #d77480;   /* rose */
+  --accent-2:  #b14b5e;   /* plum-rose */
+
+  /* Code highlight defaults (kept but softened) */
+  --sh-class:      #4c97f8;
+  --sh-identifier: #ffffff;
+  --sh-sign:       #cbbfc2;
+  --sh-string:     #0fa295;
+  --sh-keyword:    #f47067;
+  --sh-comment:    #a19595;
+  --sh-jsxliterals:#6266d1;
+  --sh-property:   #e25a1c;
+  --sh-entity:     #e25a1c;
 }
 
-:root {
-  --sh-class: #2d5e9d;
-  --sh-identifier: #354150;
-  --sh-sign: #8996a3;
-  --sh-string: #007f7a;
-  --sh-keyword: #e02518;
-  --sh-comment: #a19595;
-  --sh-jsxliterals: #6266d1;
-  --sh-property: #e25a1c;
-  --sh-entity: #e25a1c;
+html{ color-scheme: dark; min-width:360px; }
+body{
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Courier Prime", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --sh-class: #4c97f8;
-    --sh-identifier: white;
-    --sh-keyword: #f47067;
-    --sh-string: #0fa295;
-  }
-  html {
-    color-scheme: dark;
-  }
+/* Soft vignette / ambient glow */
+body::before{
+  content:"";
+  position:fixed; inset:-12vmax;
+  background:
+    radial-gradient(60% 60% at 50% 18%, rgba(215,116,128,.16), transparent 60%),
+    radial-gradient(38% 38% at 12% 88%, rgba(177,75,94,.10), transparent 60%);
+  filter: blur(34px);
+  pointer-events:none; z-index:-1;
 }
 
-html {
-  min-width: 360px;
+/* Cozy selection */
+::selection{
+  background-color: rgba(215,116,128,.35);
+  color: var(--fg);
 }
 
-.prose .anchor {
-  @apply absolute invisible no-underline;
+/* Existing styles (adapted to theme) */
 
-  margin-left: -1em;
-  padding-right: 0.5em;
-  width: 80%;
-  max-width: 700px;
-  cursor: pointer;
+.prose .anchor{ @apply absolute invisible no-underline; margin-left:-1em; padding-right:.5em; width:80%; max-width:700px; cursor:pointer; }
+.anchor:hover{ @apply visible; }
+
+.prose a{ @apply underline transition-all underline-offset-2; text-decoration-color: color-mix(in oklab, var(--muted) 80%, transparent); }
+.prose .anchor:after{ content:'#'; color: var(--muted); }
+.prose *:hover > .anchor{ @apply visible; }
+
+/* Code blocks */
+.prose pre{
+  @apply rounded-lg overflow-x-auto py-2 px-3 text-sm;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+.prose code{ @apply px-1 py-0.5 rounded-lg; background: color-mix(in oklab, var(--panel) 80%, transparent); }
+.prose pre code{ @apply p-0; border: initial; line-height:1.5; }
+.prose code span{ @apply font-medium; }
+
+/* Images inside prose */
+.prose img{ @apply m-0; }
+
+/* Typography colors */
+.prose p{ @apply my-4; color: var(--fg); }
+.prose h1{ @apply text-4xl font-medium tracking-tight mt-6 mb-2; }
+.prose h2{ @apply text-xl  font-medium tracking-tight mt-6 mb-2; }
+.prose h3{ @apply text-xl  font-medium tracking-tight mt-6 mb-2; }
+.prose h4{ @apply text-lg  font-medium tracking-tight mt-6 mb-2; }
+.prose strong{ @apply font-medium; }
+.prose ul{ @apply list-disc pl-6; }
+.prose ol{ @apply list-decimal pl-6; }
+.prose > :first-child{ margin-top:1.25em !important; margin-bottom:1.25em !important; }
+
+/* Scrollbars hidden in code blocks */
+pre::-webkit-scrollbar{ display:none; }
+pre{ -ms-overflow-style:none; scrollbar-width:none; }
+
+/* Inputs – remove iOS shadow */
+input[type='text'], input[type='email']{
+  -webkit-appearance:none; -moz-appearance:none; appearance:none;
 }
 
-.anchor:hover {
-  @apply visible;
+/* Tables */
+table{ display:block; max-width:fit-content; overflow-x:auto; white-space:nowrap; }
+
+.title{ text-wrap: balance; }
+
+/* Helpful utilities for the cozy theme */
+.panel{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
 }
 
-.prose a {
-  @apply underline transition-all decoration-neutral-400 dark:decoration-neutral-600 underline-offset-2 decoration-[0.1em];
+.btn{
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: .65rem 1rem;
+  color: var(--fg);
 }
 
-.prose .anchor:after {
-  @apply text-neutral-300 dark:text-neutral-700;
-  content: '#';
-}
-
-.prose *:hover > .anchor {
-  @apply visible;
-}
-
-.prose pre {
-  @apply bg-neutral-50 dark:bg-neutral-900 rounded-lg overflow-x-auto border border-neutral-200 dark:border-neutral-900 py-2 px-3 text-sm;
-}
-
-.prose code {
-  @apply px-1 py-0.5 rounded-lg;
-}
-
-.prose pre code {
-  @apply p-0;
-  border: initial;
-  line-height: 1.5;
-}
-
-.prose code span {
-  @apply font-medium;
-}
-
-.prose img {
-  /* Don't apply styles to next/image */
-  @apply m-0;
-}
-
-.prose p {
-  @apply my-4 text-neutral-800 dark:text-neutral-200;
-}
-
-.prose h1 {
-  @apply text-4xl font-medium tracking-tight mt-6 mb-2;
-}
-
-.prose h2 {
-  @apply text-xl font-medium tracking-tight mt-6 mb-2;
-}
-
-.prose h3 {
-  @apply text-xl font-medium tracking-tight mt-6 mb-2;
-}
-
-.prose h4 {
-  @apply text-lg font-medium tracking-tight mt-6 mb-2;
-}
-
-.prose strong {
-  @apply font-medium;
-}
-
-.prose ul {
-  @apply list-disc pl-6;
-}
-
-.prose ol {
-  @apply list-decimal pl-6;
-}
-
-.prose > :first-child {
-  /* Override removing top margin, causing layout shift */
-  margin-top: 1.25em !important;
-  margin-bottom: 1.25em !important;
-}
-
-pre::-webkit-scrollbar {
-  display: none;
-}
-
-pre {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
-
-/* Remove Safari input shadow on mobile */
-input[type='text'],
-input[type='email'] {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-
-table {
-  display: block;
-  max-width: fit-content;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
-.title {
-  text-wrap: balance;
-}
+.text-muted{ color: var(--muted); }
