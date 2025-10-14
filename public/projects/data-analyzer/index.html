@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Fleet Data Analyzer</title>
+
   <link rel="stylesheet" href="https://pyscript.net/releases/2024.11.1/core.css" />
   <script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
 </head>
@@ -42,14 +43,25 @@
       <div id="plot2" style="margin-top:16px"></div>
     </section>
 
-    <footer>Built with PyScript (pandas + matplotlib) and runs fully in your browser.</footer>
+    <footer>Built with PyScript (pandas + matplotlib).</footer>
   </main>
 
-  <script type="py">
-import pyodide
-await pyodide.loadPackage(["pandas", "matplotlib"])
+  <script type="py-config">{ "packages": [] }</script>
 
-from js import document  
+  <script type="py">
+try:
+    # Use the JS global pyodide object
+    from js import pyodide as _pyodide
+    await _pyodide.loadPackage(["pandas", "matplotlib"])
+except Exception:
+    # Fallback via micropip if needed
+    import pyodide
+    await pyodide.loadPackage("micropip")
+    import micropip
+    await micropip.install(["pandas", "matplotlib"])
+
+from js import document
+from pyodide.http import open_url
 import pandas as pd
 import random
 from datetime import datetime, timedelta
@@ -101,7 +113,11 @@ def simulate(fleet=5, minutes=120, noise=0.8):
     return pd.DataFrame(rows)
 
 def load_csv(path):
-    return pd.read_csv(path)
+    # robust: works for same-origin static files on Vercel
+    try:
+        return pd.read_csv(path)
+    except Exception:
+        return pd.read_csv(open_url(path))
 
 def compute_kpis(df):
     trips = df["vehicle_id"].nunique()
@@ -152,7 +168,6 @@ def run_app(event=None):
     document.getElementById("plot1").innerHTML = plot_speed(df)
     document.getElementById("plot2").innerHTML = plot_battery(df)
 
-# wire button
 document.getElementById("run").addEventListener("click", run_app)
   </script>
 </body>
