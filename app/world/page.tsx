@@ -25,10 +25,10 @@ const HOTSPOTS: HS[] = [
 type NPC = { name:string; x:number; y:number; line:string };
 const CATS: NPC[] = [
   { name: 'Cookie', x: 23*TILE+TILE*0.5, y: 10*TILE+TILE*0.5, line: 'Hi! I‘m Cookie 🐾' },
-  { name: 'Belle', x: 7*TILE+TILE*0.5,  y: 10*TILE+TILE*0.5, line: 'Hi! I‘m Belle 🐾' },
+  { name: 'Belle',  x: 7*TILE+TILE*0.5,  y: 10*TILE+TILE*0.5, line: 'Hi! I‘m Belle 🐾' },
 ];
 
-/** ===== small helpers ===== */
+/** ===== helpers ===== */
 const ixy = (x:number,y:number)=> y*COLS + x;
 function aabb(ax:number,ay:number,aw:number,ah:number, bx:number,by:number,bw:number,bh:number){
   return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
@@ -41,17 +41,18 @@ const MAP:number[] = (() => {
   for (let x=0;x<COLS;x++){ g[ixy(x,0)]=1; g[ixy(x,ROWS-1)]=1; }
   for (let y=0;y<ROWS;y++){ g[ixy(0,y)]=1; g[ixy(COLS-1,y)]=1; }
 
-  // corridors + rooms style walls (soft rose)
+  // corridors + room frames
   const wall = (x:number,y:number)=>{ g[ixy(x,y)]=1; };
   // horizontal spine
   for (let x=6;x<COLS-6;x++) wall(x, 10);
   // vertical to garden
   for (let y=10;y<ROWS-2;y++) wall(15,y);
-  // room frames (thin edges)
+
   const frame = (x:number,y:number,w:number,h:number)=>{
     for(let i=x;i<x+w;i++){ wall(i,y); wall(i,y+h-1); }
     for(let j=y;j<y+h;j++){ wall(x,j); wall(x+w-1,j); }
   };
+  // frames
   frame(5,4,6,4);     // lab
   frame(20,4,6,4);    // techauto
   frame(5,13,6,4);    // stabilus
@@ -60,26 +61,43 @@ const MAP:number[] = (() => {
   frame(3,9,4,3);     // library
   frame(23,9,4,3);    // coffee
   frame(14,17,2,1);   // garden edge
-  // door gaps
-  g[ixy(15,10)] = 0;
-  g[ixy(14,10)] = 0;
+
+  // door gaps into each room  ⟵ this is what was blocking you
+  g[ixy(15,10)] = 0; // corridor gap (right of center)
+  g[ixy(14,10)] = 0; // corridor gap (left of center)
+
+  // lab bottom door (center)
+  g[ixy(8,7)] = 0;
+  // tech-auto bottom door (center)
+  g[ixy(23,7)] = 0;
+  // stabilus top door (center)
+  g[ixy(8,13)] = 0;
+  // study top door (center)
+  g[ixy(23,13)] = 0;
+  // ai-den bottom door (center)
+  g[ixy(15,5)] = 0;
+  // library right door (onto spine at y=10)
+  g[ixy(6,10)] = 0;
+  // coffee left door (onto spine at y=10)
+  g[ixy(23,10)] = 0;
+
   return g;
 })();
 
 /** ===== Procedural pixel sprites =====
- * Ivana (12 frames) + two cats.
- * These draw onto an offscreen canvas so you can swap to PNGs later.
+ * Ivana (12 frames) + two cats. No external images needed.
  */
 function makeIvanaFrames() {
-  // 16x16 pixel body drawn in blocks; scale ×2 when painting.
   const frames:HTMLCanvasElement[] = [];
   const drawOne = (dir:0|1|2|3, step:0|1|2) => {
     const c = document.createElement('canvas');
     c.width = 16; c.height = 16;
     const ctx = c.getContext('2d')!;
-    const hair = '#2a1b1f', skin='#3b2a2e', blush='#b56a72', dress='#e59aa7', trim='#fff2f2', shoes='#2a1b1f';
-    // shadow of step: alternate arms & legs
+    const hair = '#2a1b1f';
+    const skin = '#8f6e74'; 
+    const blush='#b56a72', dress='#e59aa7', trim='#fff2f2', shoes='#2a1b1f';
     const leg = step===1? 1 : 0;
+
     // hair
     ctx.fillStyle = hair; ctx.fillRect(3,2,10,7);
     ctx.fillRect(2,5,12,3);
@@ -89,17 +107,13 @@ function makeIvanaFrames() {
     ctx.fillStyle = blush; ctx.fillRect(5,7,1,1); ctx.fillRect(10,7,1,1);
     // eyes
     ctx.fillStyle = '#1a1214'; ctx.fillRect(7,6,1,1); ctx.fillRect(9,6,1,1);
-    // dress
+    // dress & collar
     ctx.fillStyle = dress; ctx.fillRect(5,9,6,4);
-    // collar
-    ctx.fillStyle = trim; ctx.fillRect(5,9,6,1);
+    ctx.fillStyle = trim;  ctx.fillRect(5,9,6,1);
     // arms
     ctx.fillStyle = skin;
-    if (dir===0||dir===1){ // facing down/right: alternate
-      ctx.fillRect(4,10-leg,1,2); ctx.fillRect(11,10+leg,1,2);
-    }else{
-      ctx.fillRect(4,10+leg,1,2); ctx.fillRect(11,10-leg,1,2);
-    }
+    if (dir===0||dir===1){ ctx.fillRect(4,10-leg,1,2); ctx.fillRect(11,10+leg,1,2); }
+    else { ctx.fillRect(4,10+leg,1,2); ctx.fillRect(11,10-leg,1,2); }
     // legs
     ctx.fillStyle = shoes;
     ctx.fillRect(6-leg,13,2,2); ctx.fillRect(8+leg,13,2,2);
@@ -123,12 +137,11 @@ function makeCat(color='#e7a264'){
   const c = document.createElement('canvas'); c.width=16; c.height=16;
   const ctx = c.getContext('2d')!;
   const fur = color, line='#6b4c30';
-  ctx.fillStyle=fur; ctx.fillRect(3,7,10,6); // body
+  ctx.fillStyle=fur; ctx.fillRect(3,7,10,6);
   ctx.fillRect(4,5,3,2); ctx.fillRect(9,5,3,2); // ears
-  ctx.fillRect(1,9,2,3); ctx.fillRect(13,9,2,3); // cheeks
-  ctx.fillRect(2,12,12,1); // base
-  ctx.fillStyle=line; // eyes
-  ctx.fillRect(6,9,1,1); ctx.fillRect(9,9,1,1);
+  ctx.fillRect(1,9,2,3); ctx.fillRect(13,9,2,3);
+  ctx.fillRect(2,12,12,1);
+  ctx.fillStyle=line; ctx.fillRect(6,9,1,1); ctx.fillRect(9,9,1,1);
   return c;
 }
 function drawCat(ctx:CanvasRenderingContext2D, img:HTMLCanvasElement, x:number,y:number){
@@ -150,17 +163,25 @@ export default function World() {
   const [dir, setDir] = useState<0|1|2|3>(0);
   const [t, setT] = useState(0); // animation clock
 
+  // lock body scroll only while this page is mounted
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   // generate sprites once
   const ivanaFramesRef = useRef<HTMLCanvasElement[]|null>(null);
-  const catsRef = useRef<{Cookie:HTMLCanvasElement, Belle:HTMLCanvasElement}|null>(null);
+  const catsRef = useRef<{cookie:HTMLCanvasElement, belle:HTMLCanvasElement}|null>(null);
   useEffect(()=>{
     ivanaFramesRef.current = makeIvanaFrames();
-    catsRef.current = { Cookie: makeCat('#e2a05a'), Belle: makeCat('#e7b16a') };
+    catsRef.current = { cookie: makeCat('#e2a05a'), belle: makeCat('#e7b16a') };
   },[]);
 
-  // controls
+  // controls (prevent page scroll on arrow keys)
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
       if (openPanel || openLine) return;
       if (e.key === 'ArrowLeft' || e.key === 'a') { setVx(-1); setDir(1); }
       if (e.key === 'ArrowRight'|| e.key === 'd') { setVx(1);  setDir(2); }
@@ -169,14 +190,15 @@ export default function World() {
       if (e.key === 'e') interact();
     };
     const up = (e: KeyboardEvent) => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
       if (['ArrowLeft','a'].includes(e.key) && vx<0) setVx(0);
       if (['ArrowRight','d'].includes(e.key) && vx>0) setVx(0);
       if (['ArrowUp','w'].includes(e.key) && vy<0) setVy(0);
       if (['ArrowDown','s'].includes(e.key) && vy>0) setVy(0);
     };
-    window.addEventListener('keydown', down);
-    window.addEventListener('keyup', up);
-    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+    window.addEventListener('keydown', down, { passive:false });
+    window.addEventListener('keyup', up, { passive:false });
+    return () => { window.removeEventListener('keydown', down as any); window.removeEventListener('keyup', up as any); };
   }, [vx,vy,openPanel,openLine]);
 
   const interact = () => {
@@ -197,10 +219,8 @@ export default function World() {
   useEffect(() => {
     let raf = 0;
     const step = () => {
-      // animate
       setT(v => (v+1)%9999);
 
-      // movement with collision
       let nx = px + vx*SPEED;
       let ny = py + vy*SPEED;
 
@@ -225,11 +245,10 @@ export default function World() {
       const c = canvasRef.current;
       if (!c || !ivanaFramesRef.current || !catsRef.current) return;
       const ctx = c.getContext('2d')!;
-      // canvas size & camera center
       c.width = COLS*TILE; c.height = ROWS*TILE;
       ctx.imageSmoothingEnabled = false;
 
-      // floor parquet pattern
+      // parquet pattern
       ctx.fillStyle = '#fff7f6'; ctx.fillRect(0,0,c.width,c.height);
       for(let y=0;y<ROWS;y++){
         for(let x=0;x<COLS;x++){
@@ -239,7 +258,6 @@ export default function World() {
           }
         }
       }
-
       // walls
       for (let y=0;y<ROWS;y++){
         for (let x=0;x<COLS;x++){
@@ -249,8 +267,7 @@ export default function World() {
           }
         }
       }
-
-      // hotspots (soft blocks) + labels
+      // hotspots + labels
       ctx.font = '12px "Courier Prime", monospace';
       HOTSPOTS.forEach(h=>{
         ctx.fillStyle = 'rgba(209, 120, 128, .10)';
@@ -260,13 +277,13 @@ export default function World() {
       });
 
       // cats
-      drawCat(ctx, catsRef.current.Cookie, CATS[0].x, CATS[0].y);
-      drawCat(ctx, catsRef.current.Belle, CATS[1].x, CATS[1].y);
+      drawCat(ctx, catsRef.current.cookie, CATS[0].x, CATS[0].y);
+      drawCat(ctx, catsRef.current.belle,  CATS[1].x, CATS[1].y);
 
       // ivana
       drawIvana(ctx, ivanaFramesRef.current, px, py, dir, t);
 
-      // interaction hint if near something
+      // interaction hint
       const nearCat = CATS.some(c => Math.hypot(px - c.x, py - c.y) < 30);
       const tx = Math.floor(px/TILE), ty = Math.floor(py/TILE);
       const onRoom = HOTSPOTS.find(h => aabb(tx,ty,1,1, h.x,h.y,h.w,h.h));
@@ -290,7 +307,7 @@ export default function World() {
         Move with WASD/Arrow keys. Stand on a room or near a cat and press <b>E</b>.
       </p>
 
-      <div className="relative overflow-auto border rounded-xl"
+      <div className="relative overflow-auto border rounded-xl max-w-full"
            style={{borderColor:"var(--border)"}}>
         <canvas ref={canvasRef}
                 className="block mx-auto"
