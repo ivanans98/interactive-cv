@@ -46,12 +46,10 @@
   </main>
 
   <script type="py">
-# --- packages ---
-from pyscript import window
-await window.pyodide.loadPackage(["pandas", "matplotlib"])
-# -------------------------------------
+import pyodide
+await pyodide.loadPackage(["pandas", "matplotlib"])
 
-from js import document
+from js import document  
 import pandas as pd
 import random
 from datetime import datetime, timedelta
