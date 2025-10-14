@@ -1,21 +1,29 @@
-import { BlogPosts } from 'app/components/posts'
-
-export default function Page() {
+export default function Home() {
   return (
-    <section>
-      <h1 className="mb-8 text-2xl font-semibold tracking-tighter">
-        My Portfolio
-      </h1>
-      <p className="mb-4">
-        {`I'm a Vim enthusiast and tab advocate, finding unmatched efficiency in
-        Vim's keystroke commands and tabs' flexibility for personal viewing
-        preferences. This extends to my support for static typing, where its
-        early error detection ensures cleaner code, and my preference for dark
-        mode, which eases long coding sessions by reducing eye strain.`}
+    <main className="mx-auto max-w-3xl px-6 py-16">
+      <h1 className="text-4xl font-semibold mb-3">Welcome to my world</h1>
+      <p className="text-gray-400 mb-8">
+        Explore a cozy, Gather.town-style house to discover my projects, skills, and story.
       </p>
-      <div className="my-8">
-        <BlogPosts />
+
+      <div className="flex gap-4">
+        <a
+          href="/world"
+          className="px-5 py-3 rounded-xl border border-gray-700 hover:border-gray-500"
+        >
+          ▶ Start exploring
+        </a>
+        <a
+          href="/cv"
+          className="px-5 py-3 rounded-xl border border-gray-700 hover:border-gray-500"
+        >
+          Open classic CV
+        </a>
       </div>
-    </section>
-  )
+
+      <div className="mt-14 text-sm text-gray-500">
+        Cozy vibe • pixel-cute • no analytics — just a show & tell.
+      </div>
+    </main>
+  );
 }
