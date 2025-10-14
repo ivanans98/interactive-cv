@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { PANELS, getPanel, type Panel } from './panels';
 
-/** ===== World constants ===== */
+/* =============== World constants =============== */
 const TILE = 32;
 const COLS = 30;
 const ROWS = 20;
@@ -25,16 +25,16 @@ const HOTSPOTS: HS[] = [
 type NPC = { name:string; x:number; y:number; line:string };
 const CATS: NPC[] = [
   { name: 'Cookie', x: 23*TILE+TILE*0.5, y: 10*TILE+TILE*0.5, line: 'Hi! I‘m Cookie 🐾' },
-  { name: 'Belle',  x: 7*TILE+TILE*0.5,  y: 10*TILE+TILE*0.5, line: 'Hi! I‘m Belle 🐾' },
+  { name: 'Belle',  x:  7*TILE+TILE*0.5, y: 10*TILE+TILE*0.5, line: 'Hi! I‘m Belle 🐾' },
 ];
 
-/** ===== helpers ===== */
+/* =============== helpers =============== */
 const ixy = (x:number,y:number)=> y*COLS + x;
 function aabb(ax:number,ay:number,aw:number,ah:number, bx:number,by:number,bw:number,bh:number){
   return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
 }
 
-/** ===== simple house map: 0 floor, 1 wall ===== */
+/* =============== simple house map: 0 floor, 1 wall =============== */
 const MAP:number[] = (() => {
   const g = Array(ROWS*COLS).fill(0);
   // outer frame
@@ -62,7 +62,7 @@ const MAP:number[] = (() => {
   frame(23,9,4,3);    // coffee
   frame(14,17,2,1);   // garden edge
 
-  // door gaps into each room  ⟵ this is what was blocking you
+  // door gaps into each room (open access)
   g[ixy(15,10)] = 0; // corridor gap (right of center)
   g[ixy(14,10)] = 0; // corridor gap (left of center)
 
@@ -84,7 +84,7 @@ const MAP:number[] = (() => {
   return g;
 })();
 
-/** ===== Procedural pixel sprites =====
+/* =============== Procedural pixel sprites ===============
  * Ivana (12 frames) + two cats. No external images needed.
  */
 function makeIvanaFrames() {
@@ -94,8 +94,8 @@ function makeIvanaFrames() {
     c.width = 16; c.height = 16;
     const ctx = c.getContext('2d')!;
     const hair = '#2a1b1f';
-    const skin = '#8f6e74'; 
-    const blush='#b56a72', dress='#e59aa7', trim='#fff2f2', shoes='#2a1b1f';
+    const skin = '#c89aa4'; // lighter skin tone (~50% lighter than before)
+    const blush='#d07a85', dress='#e59aa7', trim='#fff2f2', shoes='#2a1b1f';
     const leg = step===1? 1 : 0;
 
     // hair
@@ -149,7 +149,84 @@ function drawCat(ctx:CanvasRenderingContext2D, img:HTMLCanvasElement, x:number,y
   ctx.drawImage(img, Math.round(x)-14, Math.round(y)-14, 28, 28);
 }
 
-/** ===== Main component ===== */
+/* =============== Props: images & placement =============== */
+import PROPS, { type Prop } from './props';
+
+type ImgRef = { el: HTMLImageElement, w: number, h: number };
+const propImgs = new Map<string, ImgRef>();
+
+function loadImage(src: string): Promise<ImgRef> {
+  return new Promise((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve({ el, w: el.naturalWidth, h: el.naturalHeight });
+    el.onerror = reject;
+    el.src = src;
+  });
+}
+
+// depth sort & draw props
+function drawProps(ctx: CanvasRenderingContext2D) {
+  const items = PROPS.map(p => {
+    const ir = propImgs.get(p.img)!;
+    const px = p.x * TILE;
+    const py = p.y * TILE;
+    const drawX = Math.round(px - ir.w / 2 + TILE / 2); // bottom-center anchor
+    const drawY = Math.round(py - ir.h + TILE);
+    return { p, ir, drawX, drawY, z: drawY + ir.h };
+  });
+
+  // wall layer (decorations attached to walls)
+  for (const it of items) {
+    if (it.p.layer === 'wall') {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(it.ir.el, it.drawX, it.drawY);
+    }
+  }
+
+  // floor props (depth sorted)
+  items
+    .filter(it => !it.p.layer || it.p.layer === 'floor')
+    .sort((a, b) => a.z - b.z)
+    .forEach(it => {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(it.ir.el, it.drawX, it.drawY);
+    });
+
+  // tabletop props last (do not collide)
+  for (const it of items) {
+    if (it.p.layer === 'tabletop') {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(it.ir.el, it.drawX, it.drawY);
+    }
+  }
+}
+
+// feet-point collision against prop footprints
+function collidesWithProps(feetX: number, feetY: number): boolean {
+  for (const p of PROPS) {
+    if (p.layer === 'tabletop' || p.layer === 'wall') continue;
+    const ir = propImgs.get(p.img)!;
+    const sx = p.x * TILE - ir.w / 2 + TILE / 2;
+    const sy = p.y * TILE - ir.h + TILE;
+    const sw = ir.w;
+    const sh = ir.h;
+
+    const fp = p.fp ?? 0; // height of blocking band at bottom
+    if (fp > 0) {
+      const fx = sx;
+      const fy = sy + sh - fp;
+      const fw = sw;
+      const fh = fp;
+
+      if (feetX >= fx && feetX <= fx + fw && feetY >= fy && feetY <= fy + fh) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/* =============== Main component =============== */
 export default function World() {
   const canvasRef = useRef<HTMLCanvasElement|null>(null);
   const [openPanel, setOpenPanel] = useState<Panel|null>(null);
@@ -163,6 +240,9 @@ export default function World() {
   const [dir, setDir] = useState<0|1|2|3>(0);
   const [t, setT] = useState(0); // animation clock
 
+  // when assets ready
+  const [ready, setReady] = useState(false);
+
   // lock body scroll only while this page is mounted
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -170,12 +250,23 @@ export default function World() {
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  // generate sprites once
+  // generate sprites & preload prop images once
   const ivanaFramesRef = useRef<HTMLCanvasElement[]|null>(null);
   const catsRef = useRef<{cookie:HTMLCanvasElement, belle:HTMLCanvasElement}|null>(null);
   useEffect(()=>{
     ivanaFramesRef.current = makeIvanaFrames();
     catsRef.current = { cookie: makeCat('#e2a05a'), belle: makeCat('#e7b16a') };
+
+    (async () => {
+      await Promise.all(
+        PROPS.map(async p => {
+          if (!propImgs.has(p.img)) {
+            propImgs.set(p.img, await loadImage(p.img));
+          }
+        })
+      );
+      setReady(true);
+    })();
   },[]);
 
   // controls (prevent page scroll on arrow keys)
@@ -217,6 +308,8 @@ export default function World() {
 
   // movement + drawing
   useEffect(() => {
+    if (!ready) return; // wait for props to load
+
     let raf = 0;
     const step = () => {
       setT(v => (v+1)%9999);
@@ -226,15 +319,23 @@ export default function World() {
 
       const col = (xx:number, yy:number) => MAP[ Math.floor(yy/TILE)*COLS + Math.floor(xx/TILE) ] === 1;
       const half = TILE*0.35;
+
+      // try X
+      const nxFeetX = nx;                 // bottom-center x
+      const nxFeetY = py + half;          // approximate feet y
       const canX = !(
         col(nx-half, py-half) || col(nx+half, py-half) ||
         col(nx-half, py+half) || col(nx+half, py+half)
-      );
+      ) && !collidesWithProps(nxFeetX, nxFeetY);
       if (canX) setPx(nx);
+
+      // try Y
+      const nyFeetX = px;                 // bottom-center x
+      const nyFeetY = ny + half;          // approximate feet y
       const canY = !(
         col(px-half, ny-half) || col(px+half, ny-half) ||
         col(px-half, ny+half) || col(px+half, ny+half)
-      );
+      ) && !collidesWithProps(nyFeetX, nyFeetY);
       if (canY) setPy(ny);
 
       draw();
@@ -248,7 +349,7 @@ export default function World() {
       c.width = COLS*TILE; c.height = ROWS*TILE;
       ctx.imageSmoothingEnabled = false;
 
-      // parquet pattern
+      // soft checkered base (until we switch to tiles.png everywhere)
       ctx.fillStyle = '#fff7f6'; ctx.fillRect(0,0,c.width,c.height);
       for(let y=0;y<ROWS;y++){
         for(let x=0;x<COLS;x++){
@@ -267,6 +368,7 @@ export default function World() {
           }
         }
       }
+
       // hotspots + labels
       ctx.font = '12px "Courier Prime", monospace';
       HOTSPOTS.forEach(h=>{
@@ -275,6 +377,9 @@ export default function World() {
         ctx.fillStyle = '#7d5e65';
         ctx.fillText(h.label, h.x*TILE+3, h.y*TILE-4);
       });
+
+      // props (depth sorted)
+      drawProps(ctx);
 
       // cats
       drawCat(ctx, catsRef.current.cookie, CATS[0].x, CATS[0].y);
@@ -298,7 +403,7 @@ export default function World() {
     step();
     return () => cancelAnimationFrame(raf);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [px,py,vx,vy]);
+  }, [px,py,vx,vy,ready]);
 
   return (
     <div className="px-4 py-6">
@@ -307,7 +412,7 @@ export default function World() {
         Move with WASD/Arrow keys. Stand on a room or near a cat and press <b>E</b>.
       </p>
 
-      <div className="relative overflow-auto border rounded-xl max-w-full"
+      <div className="relative overflow-hidden border rounded-xl max-w-full"
            style={{borderColor:"var(--border)"}}>
         <canvas ref={canvasRef}
                 className="block mx-auto"
@@ -334,7 +439,7 @@ export default function World() {
   );
 }
 
-/** ===== UI bits ===== */
+/* =============== UI bits =============== */
 function PanelModal({panel,onClose}:{panel:Panel,onClose:()=>void}){
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
