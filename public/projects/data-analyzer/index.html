@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Fleet Data Analyzer</title>
-  <link rel="stylesheet" href="assets/style.css" />
-  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.11.1/core.css" />
+  <script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
 </head>
 <body>
   <main>
@@ -45,11 +45,13 @@
     <footer>Built with PyScript (pandas + matplotlib) and runs fully in your browser.</footer>
   </main>
 
-  <py-config>
-    packages = ["pandas", "matplotlib"]
-  </py-config>
-
-  <py-script>
+<script type="py-config">
+{
+  "packages": ["pandas", "matplotlib"]
+}
+</script>
+  
+<script type="py">    
 from js import document
 import pandas as pd
 import random
@@ -155,6 +157,6 @@ def run_app(event=None):
 
 # wire button
 document.getElementById("run").addEventListener("click", run_app)
-  </py-script>
+  </script>
 </body>
 </html>
