@@ -45,13 +45,12 @@
     <footer>Built with PyScript (pandas + matplotlib) and runs fully in your browser.</footer>
   </main>
 
-<script type="py-config">
-{
-  "packages": ["pandas", "matplotlib"]
-}
-</script>
-  
-<script type="py">    
+  <script type="py">
+# --- packages ---
+from pyscript import window
+await window.pyodide.loadPackage(["pandas", "matplotlib"])
+# -------------------------------------
+
 from js import document
 import pandas as pd
 import random
