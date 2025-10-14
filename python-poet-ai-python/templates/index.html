@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Python Poet</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <main class="container">
+      <h1>Python Poet</h1>
+      <form id="poem-form">
+        <input id="topic" placeholder="Enter a topic">
+        <select id="style">
+          <option>free verse</option>
+          <option>haiku</option>
+        </select>
+        <button type="submit">Generate</button>
+      </form>
+      <pre id="poem"></pre>
+    </main>
+    <script>
+      const form = document.getElementById('poem-form');
+      const poemEl = document.getElementById('poem');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const topic = document.getElementById('topic').value;
+        const style = document.getElementById('style').value;
+        const res = await fetch('/api/poem', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({topic, style})
+        });
+        const data = await res.json();
+        poemEl.textContent = data.poem || data.error;
+      });
+    </script>
+  </body>
+</html>
