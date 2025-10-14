@@ -93,8 +93,8 @@ const panels: Panel[] = [
       "CV available anytime."
     ],
     ctas: [
-      { label: "Email", href: "mailto:your.email@example.com" },
-      { label: "LinkedIn", href: "https://www.linkedin.com/in/your-handle", external: true },
+      { label: "Email", href: "mailto:inavarretesanteliz@gmail.com" },
+      { label: "LinkedIn", href: "www.linkedin.com/in/ivana-navarrete-santeliz", external: true },
       { label: "GitHub", href: "https://github.com/ivanas98", external: true },
       { label: "Open CV", href: "/cv" }
     ],
