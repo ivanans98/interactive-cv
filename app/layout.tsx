@@ -1,25 +1,21 @@
-import './global.css'
+import './globals.css'
 import type { Metadata } from 'next'
-import { GeistSans } from 'geist/font/sans'
-import { GeistMono } from 'geist/font/mono'
-import { Navbar } from './components/nav'
-import { Analytics } from '@vercel/analytics/react'
-import { SpeedInsights } from '@vercel/speed-insights/next'
-import Footer from './components/footer'
 import { baseUrl } from './sitemap'
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: 'Next.js Portfolio Starter',
-    template: '%s | Next.js Portfolio Starter',
+    default: 'Ivana — Welcome to my world',
+    template: '%s · Ivana',
   },
-  description: 'This is my portfolio.',
+  description:
+    'Explore my cozy world to discover my projects, skills, and story.',
   openGraph: {
-    title: 'My Portfolio',
-    description: 'This is my portfolio.',
+    title: 'Ivana — Playable Portfolio',
+    description:
+      'Explore my cozy world to discover my projects, skills, and story.',
     url: baseUrl,
-    siteName: 'My Portfolio',
+    siteName: 'Ivana — Playable Portfolio',
     locale: 'en_US',
     type: 'website',
   },
@@ -36,30 +32,17 @@ export const metadata: Metadata = {
   },
 }
 
-const cx = (...classes) => classes.filter(Boolean).join(' ')
-
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html
-      lang="en"
-      className={cx(
-        'text-black bg-white dark:text-white dark:bg-black',
-        GeistSans.variable,
-        GeistMono.variable
-      )}
-    >
-      <body className="antialiased max-w-xl mx-4 mt-8 lg:mx-auto">
-        <main className="flex-auto min-w-0 mt-6 flex flex-col px-2 md:px-0">
-          <Navbar />
-          {children}
-          <Footer />
-          <Analytics />
-          <SpeedInsights />
-        </main>
+    <html lang="en">
+      {/* Fonts & colors are defined in globals.css */}
+      <body className="antialiased">
+        {/* Minimal shell — no template navbar/footer */}
+        <main className="min-h-dvh">{children}</main>
       </body>
     </html>
   )
