@@ -243,7 +243,7 @@ export default function World() {
       // walls
       for (let y=0;y<ROWS;y++){
         for (let x=0;x<COLS;x++){
-          if (MAP[i xy(x,y)]===1){
+          if (MAP[ixy(x,y)] === 1){
             ctx.fillStyle = '#ead4d1';
             ctx.fillRect(x*TILE, y*TILE, TILE, TILE);
           }
