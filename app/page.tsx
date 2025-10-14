@@ -7,10 +7,20 @@ export default function Home() {
           Get to know me, my projects, and skills in a lovely cozy space ☕
         </p>
 
-          <a href="/world" className="px-5 py-3 rounded-xl border" style={{borderColor:"var(--border)"}}>
-            Start exploring 
+        <div className="flex flex-wrap justify-center gap-4">
+          {}
+          <a
+            href="/world"
+            className="px-5 py-3 rounded-xl border"
+            style={{ borderColor: "var(--border)" }}
+          >
+            Start exploring
           </a>
-          <a href="/cv" className="px-5 py-3 rounded-xl border" style={{borderColor:"var(--border)"}}>
+          <a
+            href="/cv"
+            className="px-5 py-3 rounded-xl border"
+            style={{ borderColor: "var(--border)" }}
+          >
             Classic CV
           </a>
         </div>
