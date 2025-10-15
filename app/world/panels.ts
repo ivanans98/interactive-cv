@@ -26,12 +26,12 @@ export const PANELS: Panel[] = [
       "Built with Kotlin; offline-first with Room; thoughtful UX for bookworms.",
       "Currently polishing the final details for a public launch."
     ],
-    ctas: [{ label: "Mockups", href: "#"}],
+    ctas: [{ label: "Mockups", href: "#" }],
     chips: ["Android", "Kotlin", "Room"]
   },
   {
     id: "workshop-techauto",
-    title: "Workshop — Tech-Auto Ltd (Intern, Jul–Sep 2025)",
+    title: "Tech-Auto Ltd (Intern, Jul–Sep 2025)",
     bullets: [
       "Executed a full-stack redesign to support B2C expansion.",
       "WordPress build with custom code + e-commerce integration.",
@@ -45,7 +45,7 @@ export const PANELS: Panel[] = [
   },
   {
     id: "workshop-techauto-thesis",
-    title: "Workshop — Working Student (Thesis)",
+    title: "Working Student (Thesis)",
     bullets: [
       "Authoring bachelor’s thesis “From Data to Decisions”.",
       "How AI + telematics optimize robotic fleets for smart-city logistics.",
@@ -55,7 +55,7 @@ export const PANELS: Panel[] = [
   },
   {
     id: "workshop-stabilus",
-    title: "Workshop — Stabilus",
+    title: "Stabilus",
     bullets: [
       "Power BI dashboards from SAP data; MATLAB data prep.",
       "Digitalization 4.0: measurement data; C# converters; LabVIEW interfaces.",
@@ -123,4 +123,22 @@ export const PANELS: Panel[] = [
   }
 ];
 
-export const getPanel = (id: string) => PANELS.find(p => p.id === id);
+// Build a single “workshop” view by merging all workshop-* entries.
+export const getPanel = (id: string) => {
+  if (id === 'workshop') {
+    const subs = PANELS.filter(p => p.id.startsWith('workshop-'));
+    if (subs.length) {
+      return {
+        id: 'workshop',
+        title: 'Workshop — Projects & Experience',
+        bullets: subs.flatMap(s => [
+          `— ${s.title}`,
+          ...s.bullets
+        ]),
+        chips: Array.from(new Set(subs.flatMap(s => s.chips ?? []))),
+        ctas: subs.flatMap(s => s.ctas ?? [])
+      };
+    }
+  }
+  return PANELS.find(p => p.id === id);
+};
