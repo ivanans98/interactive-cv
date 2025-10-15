@@ -29,6 +29,31 @@ const TILE_IDX = {
   wall_R: 13,
 };
 
+// --- tile indices in /public/tiles.png (32x32 each)
+const TILESET = {
+  parquet: [2,0],   // room wood
+  rug1:    [1,0],   // foyer rug
+};
+
+type Rect = {x:number; y:number; w:number; h:number}; // in grid cells
+
+// Room interior rectangles (fill with parquet)
+const ROOMS: Rect[] = [
+  {x: 5,  y: 9,  w: 11, h: 7},   // Library (adjust to your map)
+  {x: 17, y: 9,  w: 16, h: 7},   // Study
+  {x: 29, y: 9,  w: 11, h: 7},   // Workshop
+  {x: 5,  y: 19, w: 11, h: 7},   // Lab
+  {x: 29, y: 19, w: 16, h: 7},   // Coffee
+  {x: 5,  y: 27, w: 40, h: 5},   // Garden walkway (if you want wood here, else skip)
+];
+
+// Foyer rug cells (explicit list so it never crosses doors)
+const FOYER_RUG: Array<[number,number]> = [
+  [20,16],[21,16],[22,16],
+  [20,17],[21,17],[22,17],
+  [20,18],[21,18],[22,18],
+];
+
 /** ===== Layout ===== */
 type Rect = { x:number; y:number; w:number; h:number };
 type HS = { id:string; rect:Rect; label:string };
@@ -301,6 +326,21 @@ export default function World() {
       );
       if (canY) setPy(ny);
 
+      function drawTile(ctx:CanvasRenderingContext2D, sx:number, sy:number, gx:number, gy:number){
+        const S = TILE;
+        const img = tilesImgRef.current!;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, sx*S, sy*S, S, S, gx*S, gy*S, S, S);
+      }
+    function drawRectOf(ctx:CanvasRenderingContext2D, key:keyof typeof TILESET, r:Rect){
+      const [sx,sy] = TILESET[key];
+      for(let yy=r.y; yy<r.y+r.h; yy++){
+        for(let xx=r.x; xx<r.x+r.w; xx++){
+          drawTile(ctx, sx, sy, xx, yy);
+        }
+      }
+    }
+
       draw();
       raf = requestAnimationFrame(step);
     };
@@ -360,24 +400,36 @@ export default function World() {
       drawCat(ctx, catsRef.current.cookie, CATS[0].x, CATS[0].y);
       drawCat(ctx, catsRef.current.belle,  CATS[1].x, CATS[1].y);
 
+      // Rooms get parquet
+      ROOMS.forEach(r => drawRectOf(ctx, 'parquet', r));
+
+      // Foyer rug (9 tiles, does NOT reach door tiles)
+      for (const [gx,gy] of FOYER_RUG){
+        const [sx,sy] = TILESET.rug1;
+        drawTile(ctx, sx, sy, gx, gy);
+      }
+
       // ===== props (draw every frame if loaded) =====
       const P = propsRef.current;
 
       // Library
       const lib = HOTSPOTS.find(h=>h.id==='library')!.rect;
       if (P['bookshelf1_32x48.png']) ctx.drawImage(P['bookshelf1_32x48.png'], (lib.x+1)*TILE, (lib.y+1)*TILE-16);
-      if (P['bookshelf2_32x48.png']) ctx.drawImage(P['bookshelf2_32x48.png'], (lib.x+3)*TILE, (lib.y+1)*TILE-16);
+      if (P['bookshelf2_32x48.png']) ctx.drawImage(P['bookshelf2_32x48.png'], (lib.x+2)*TILE, (lib.y+1)*TILE-16);
+      if (P['bookshelf1_32x48.png']) ctx.drawImage(P['bookshelf1_32x48.png'], (lib.x+3)*TILE, (lib.y+1)*TILE-16);
+      if (P['bookshelf2_32x48.png']) ctx.drawImage(P['bookshelf2_32x48.png'], (lib.x+4)*TILE, (lib.y+1)*TILE-16);
+      if (P['bookshelf1_32x48.png']) ctx.drawImage(P['bookshelf1_32x48.png'], (lib.x+5)*TILE, (lib.y+1)*TILE-16);
       if (P['plant_16x36.png'])      ctx.drawImage(P['plant_16x36.png'],      (lib.x+lib.w-2)*TILE, (lib.y+lib.h-2)*TILE-4);
 
-      // Coffee room
-      const cf = HOTSPOTS.find(h=>h.id==='coffee')!.rect;
+      // Study
+      const cf = HOTSPOTS.find(h=>h.id==='study')!.rect;
       if (P['desk_48x40.png'])            ctx.drawImage(P['desk_48x40.png'],            (cf.x+2)*TILE, (cf.y+2)*TILE-8);
       if (P['chair_16x24.png'])           ctx.drawImage(P['chair_16x24.png'],           (cf.x+3)*TILE, (cf.y+3)*TILE+6);
       if (P['coffee_machine_16x22.png'])  ctx.drawImage(P['coffee_machine_16x22.png'],  (cf.x+2)*TILE+6, (cf.y+2)*TILE-6);
       if (P['laptop_16x16.png'])          ctx.drawImage(P['laptop_16x16.png'],          (cf.x+3)*TILE+12, (cf.y+2)*TILE+6);
 
-      // Study
-      const st = HOTSPOTS.find(h=>h.id==='study')!.rect;
+      // Coffee
+      const st = HOTSPOTS.find(h=>h.id==='coffee')!.rect;
       if (P['sofa_48x32.png'])            ctx.drawImage(P['sofa_48x32.png'],            (st.x+Math.floor(st.w/2)-1)*TILE, (st.y+Math.floor(st.h/2))*TILE);
       if (P['lamp_16x44.png'])            ctx.drawImage(P['lamp_16x44.png'],            (st.x+st.w-2)*TILE+8, (st.y+Math.floor(st.h/2))*TILE-12);
       if (P['coffee_table_32x20.png'])    ctx.drawImage(P['coffee_table_32x20.png'],    (st.x+Math.floor(st.w/2))*TILE, (st.y+Math.floor(st.h/2)+1)*TILE);
