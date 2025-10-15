@@ -20,7 +20,7 @@ export const PANELS: Panel[] = [
     ],
     ctas: [{ label: "Classic CV", href: "/cv" }],
 
-    imageUrl: "/ivana.jpg",
+    imageUrl: "/ivana.png",
     imageAlt: "Ivana smiling"
   },
   {
