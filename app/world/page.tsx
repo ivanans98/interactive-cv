@@ -10,7 +10,6 @@ const ROWS = 20;
 const SPEED = 2.0;
 const DOOR = 2;
 
-/** ===== tiles.png meta (spritesheet is 16x16 source tiles, drawn at 32x32) ===== */
 const SRC_TILE = 16;
 
 /** (reference only) */
@@ -44,9 +43,9 @@ type Rect = { x: number; y: number; w: number; h: number };
 
 /** Room interior rectangles (get parquet) */
 const ROOMS: Rect[] = [
-  { x: 3, y: 4, w: 8, h: 7 },   // Library
-  { x: 12, y: 4, w: 10, h: 7 }, // Study
-  { x: 23, y: 4, w: 5,  h: 7 }, // Workshop
+  { x: 3, y: 2, w: 8, h: 7 },   // Library
+  { x: 12, y: 2, w: 10, h: 7 }, // Study
+  { x: 23, y: 2, w: 5,  h: 7 }, // Workshop
   { x: 3,  y: 12, w: 10, h: 6 },// Lab
   { x: 19, y: 12, w: 9,  h: 6 },// Coffee
 ];
