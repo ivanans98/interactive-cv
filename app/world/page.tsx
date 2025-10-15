@@ -44,6 +44,8 @@ const HOTSPOTS: HS[] = [
 
 const FOYER: Rect = { x:13, y:8, w:4, h:4 };
 
+const PROP_PATH = '/props/';
+
 /** ===== NPCs ===== */
 type NPC = { name:string; x:number; y:number; line:string };
 const CATS: NPC[] = [
@@ -213,7 +215,7 @@ export default function World() {
         'laptop_16x16.png','sofa_48x32.png','lamp_16x44.png',
         'coffee_table_32x20.png','bed_32x44.png','fountain_64x64.png'
       ];
-      const imgs = await Promise.all(names.map(n => load('/'+n)));
+      const imgs = await Promise.all(names.map(n => load(PROP_PATH + n)));
       const dict: Record<string, HTMLImageElement> = {};
       names.forEach((n,i)=>{ dict[n] = imgs[i]; });
       propsRef.current = dict;
