@@ -65,9 +65,9 @@ const FOYER_RUG: Array<[number, number]> = [
 type HS = { id: string; rect: Rect; label: string };
 
 const HOTSPOTS: HS[] = [
-  { id: 'library',  rect: { x: 3,  y: 4,  w: 8,  h: 7 }, label: 'Library' },
-  { id: 'study',    rect: { x: 12, y: 4,  w: 10, h: 7 }, label: 'Study' },
-  { id: 'workshop', rect: { x: 23, y: 4,  w: 5,  h: 7 }, label: 'Workshop' },
+  { id: 'library',  rect: { x: 3,  y: 2,  w: 8,  h: 7 }, label: 'Library' },
+  { id: 'study',    rect: { x: 12, y: 2,  w: 10, h: 7 }, label: 'Study' },
+  { id: 'workshop', rect: { x: 23, y: 2,  w: 5,  h: 7 }, label: 'Workshop' },
   { id: 'lab',      rect: { x: 3,  y: 12, w: 10, h: 6 }, label: 'Lab' },
   { id: 'coffee',   rect: { x: 19, y: 12, w: 9,  h: 6 }, label: 'Coffee' },
   { id: 'garden',   rect: { x: 3,  y: 17, w: 25, h: 3 }, label: 'Garden' },
@@ -473,9 +473,9 @@ export default function World() {
       // ===== props =====
       const P = propsRef.current;
 
-      // Foyer — only coat rack + umbrella stand (removed side table & shoe rack)
+      // Foyer
       if (P['coat_rack_16x40.png'])      drawProp(ctx, P['coat_rack_16x40.png'],      FOYER.x + FOYER.w - 1, FOYER.y,                 { scale: 1.25 });
-      if (P['umbrella_stand_16x32.png']) drawProp(ctx, P['umbrella_stand_16x32.png'], FOYER.x + 1,           FOYER.y + FOYER.h - 1,   { scale: 1.25 });
+      if (P['umbrella_stand_16x32.png']) drawProp(ctx, P['umbrella_stand_16x32.png'], FOYER.x + 1,           FOYER.y,   { scale: 1.25 });
 
       // Library
       {
