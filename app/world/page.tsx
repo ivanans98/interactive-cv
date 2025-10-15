@@ -134,9 +134,9 @@ const MAP: number[] = (() => {
     for (let d = 0; d < DOOR; d++) g[ixy(cf.x, y + d)] = 0;                 // coffee left
   }
   {
-    const gd = HOTSPOTS.find(h => h.id === 'garden')!.rect;
-    const cx = gd.x + Math.floor(gd.w / 2) - 1;
-    for (let d = 0; d < DOOR; d++) g[ixy(cx + d, gd.y)] = 0;                // garden top
+    const gardenRect = HOTSPOTS.find(h => h.id === 'garden')!.rect;
+    const cx = gardenRect.x + Math.floor(gardenRect.w / 2) - 1;
+    for (let d = 0; d < DOOR; d++) g[ixy(cx + d, gardenRect.y)] = 0;                // garden top
   }
 
   return g;
@@ -395,7 +395,7 @@ export default function World() {
       }
 
       // Garden ground: grass with sprinkled flowers
-      const gd = HOTSPOTS.find(h => h.id === 'garden')!.rect;
+      const gd = gardenRect;
       for (let yy = gd.y; yy < gd.y + gd.h; yy++) {
         for (let xx = gd.x; xx < gd.x + gd.w; xx++) {
           const [gx, gy] = TILESET.grass;
@@ -474,7 +474,7 @@ export default function World() {
       if (P['bed_32x44.png'])           ctx.drawImage(P['bed_32x44.png'],           (lb.x + lb.w - 3) * TILE, (lb.y + lb.h - 3) * TILE - 12);
 
       // Garden (fountain left-aligned so door stays free)
-      const gd = HOTSPOTS.find(h => h.id === 'garden')!.rect;
+      const gd = gardenRect;
       if (P['fountain_64x64.png'])      ctx.drawImage(P['fountain_64x64.png'],      (gd.x + 1) * TILE, (gd.y + Math.floor(gd.h / 2)) * TILE - 16, 64, 64);
       if (P['tree_small_32x32.png'])     ctx.drawImage(P['tree_small_32x48.png'], (gd.x+gd.w-3)*TILE, (gd.y)*TILE-16);
       if (P['bench_48x48.png'])          ctx.drawImage(P['bench_48x24.png'],      (gd.x+gd.w-6)*TILE, (gd.y+Math.floor(gd.h/2))*TILE+8);
