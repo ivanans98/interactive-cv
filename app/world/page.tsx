@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PANELS, getPanel, type Panel } from './panels';
 import PROPS, { type Prop } from './props';
 
-/* =============== World constants =============== */
+/* ================= World constants ================= */
 const TILE = 32;
 const COLS = 30;
 const ROWS = 20;
@@ -20,7 +20,7 @@ const HOTSPOTS: HS[] = [
   { id:'ai-den',  x:12, y:3,  w:6, h:3, label:'AI Den' },
   { id:'library', x:3,  y:9,  w:4, h:3, label:'Library' },
   { id:'coffee',  x:23, y:9,  w:4, h:3, label:'Coffee' },
-  { id:'garden',  x:12, y:15, w:6, h:4, label:'Garden' },
+  { id:'garden',  x:12, y:15, w:6, h:4, label:'Garden' }, // bigger garden
 ];
 
 type NPC = { name:string; x:number; y:number; line:string };
@@ -29,13 +29,13 @@ const CATS: NPC[] = [
   { name: 'Belle',  x:  8*TILE+TILE*0.5, y: 11*TILE+TILE*0.5, line: 'Hi! I‘m Belle 🐾' },
 ];
 
-/* =============== helpers =============== */
+/* ================= helpers ================= */
 const ixy = (x:number,y:number)=> y*COLS + x;
 function aabb(ax:number,ay:number,aw:number,ah:number, bx:number,by:number,bw:number,bh:number){
   return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
 }
 
-/* =============== simple house map: 0 floor, 1 wall =============== */
+/* ================= map: 0 floor, 1 wall ================= */
 const MAP:number[] = (() => {
   const g = Array(ROWS*COLS).fill(0);
   const wall = (x:number,y:number)=>{ g[ixy(x,y)]=1; };
@@ -44,17 +44,12 @@ const MAP:number[] = (() => {
   for (let x=0;x<COLS;x++){ wall(x,0); wall(x,ROWS-1); }
   for (let y=0;y<ROWS;y++){ wall(0,y); wall(COLS-1,y); }
 
-  // corridor spine
-  for (let x=6;x<COLS-6;x++) wall(x, 10);
-  // vertical to garden
-  for (let y=10;y<ROWS-2;y++) wall(15,y);
-
   const frame = (x:number,y:number,w:number,h:number)=>{
     for(let i=x;i<x+w;i++){ wall(i,y); wall(i,y+h-1); }
     for(let j=y;j<y+h;j++){ wall(x,j); wall(x+w-1,j); }
   };
 
-  // room frames
+  // room frames (corridors are now pure floor; no “spine” walls)
   frame(5,4,6,4);      // lab
   frame(20,4,6,4);     // techauto
   frame(5,13,6,4);     // stabilus
@@ -64,23 +59,28 @@ const MAP:number[] = (() => {
   frame(23,9,4,3);     // coffee
   frame(12,15,6,4);    // garden (bigger)
 
-  // corridor gaps
-  g[ixy(15,10)]=0; g[ixy(14,10)]=0;
-
-  // doors into rooms (centers)
-  g[ixy(8,  7 )]=0; // lab bottom
-  g[ixy(23, 7 )]=0; // techauto bottom
-  g[ixy(8,  13)]=0; // stabilus top
-  g[ixy(23, 13)]=0; // study top
-  g[ixy(15, 5 )]=0; // ai-den bottom
-  g[ixy(6,  10)]=0; // library right → spine
-  g[ixy(23, 10)]=0; // coffee left → spine
-  g[ixy(15, 15)]=0; // garden top (from vertical)
+  // 2-tile doors (centered)
+  // lab bottom
+  g[ixy(7,7)] = 0; g[ixy(8,7)] = 0;
+  // techauto bottom
+  g[ixy(22,7)] = 0; g[ixy(23,7)] = 0;
+  // stabilus top
+  g[ixy(7,13)] = 0; g[ixy(8,13)] = 0;
+  // study top
+  g[ixy(22,13)] = 0; g[ixy(23,13)] = 0;
+  // ai-den bottom
+  g[ixy(14,5)] = 0; g[ixy(15,5)] = 0;
+  // library right → corridor
+  g[ixy(6,10)] = 0; g[ixy(6,9)] = 0;
+  // coffee left → corridor
+  g[ixy(23,10)] = 0; g[ixy(23,9)] = 0;
+  // garden top (from vertical corridor region)
+  g[ixy(14,15)] = 0; g[ixy(15,15)] = 0;
 
   return g;
 })();
 
-/* =============== Procedural pixel sprites =============== */
+/* ================= procedural sprites ================= */
 function makeIvanaFrames() {
   const frames:HTMLCanvasElement[] = [];
   const drawOne = (dir:0|1|2|3, step:0|1|2) => {
@@ -92,21 +92,15 @@ function makeIvanaFrames() {
     const blush='#d07a85', dress='#e59aa7', trim='#fff2f2', shoes='#2a1b1f';
     const leg = step===1? 1 : 0;
 
-    // hair
     ctx.fillStyle = hair; ctx.fillRect(3,2,10,7); ctx.fillRect(2,5,12,3);
-    // face
     ctx.fillStyle = skin; ctx.fillRect(6,5,4,4);
-    // blush + eyes
     ctx.fillStyle = blush; ctx.fillRect(5,7,1,1); ctx.fillRect(10,7,1,1);
     ctx.fillStyle = '#1a1214'; ctx.fillRect(7,6,1,1); ctx.fillRect(9,6,1,1);
-    // dress + collar
     ctx.fillStyle = dress; ctx.fillRect(5,9,6,4);
     ctx.fillStyle = trim;  ctx.fillRect(5,9,6,1);
-    // arms
     ctx.fillStyle = skin;
     if (dir===0||dir===1){ ctx.fillRect(4,10-leg,1,2); ctx.fillRect(11,10+leg,1,2); }
     else { ctx.fillRect(4,10+leg,1,2); ctx.fillRect(11,10-leg,1,2); }
-    // legs
     ctx.fillStyle = shoes;
     ctx.fillRect(6-leg,13,2,2); ctx.fillRect(8+leg,13,2,2);
     return c;
@@ -130,7 +124,7 @@ function makeCat(color='#e7a264'){
   const ctx = c.getContext('2d')!;
   const fur = color, line='#6b4c30';
   ctx.fillStyle=fur; ctx.fillRect(3,7,10,6);
-  ctx.fillRect(4,5,3,2); ctx.fillRect(9,5,3,2); // ears
+  ctx.fillRect(4,5,3,2); ctx.fillRect(9,5,3,2);
   ctx.fillRect(1,9,2,3); ctx.fillRect(13,9,2,3);
   ctx.fillRect(2,12,12,1);
   ctx.fillStyle=line; ctx.fillRect(6,9,1,1); ctx.fillRect(9,9,1,1);
@@ -141,7 +135,7 @@ function drawCat(ctx:CanvasRenderingContext2D, img:HTMLCanvasElement, x:number,y
   ctx.drawImage(img, Math.round(x)-14, Math.round(y)-14, 28, 28);
 }
 
-/* =============== Prop images =============== */
+/* ============ props support (unchanged) ============ */
 type ImgRef = { el: HTMLImageElement, w: number, h: number };
 const propImgs = new Map<string, ImgRef>();
 function loadImage(src: string): Promise<ImgRef> {
@@ -201,19 +195,19 @@ function collidesWithProps(feetX: number, feetY: number): boolean {
   return false;
 }
 
-/* =============== Main component =============== */
+/* ================= main component ================= */
 export default function World() {
   const canvasRef = useRef<HTMLCanvasElement|null>(null);
   const [openPanel, setOpenPanel] = useState<Panel|null>(null);
   const [openLine, setOpenLine] = useState<string|null>(null);
 
-  // player state
-  const [px, setPx] = useState(14*TILE);
-  const [py, setPy] = useState(14*TILE);
-  const [vx, setVx] = useState(0);
-  const [vy, setVy] = useState(0);
-  const [dir, setDir] = useState<0|1|2|3>(0);
-  const [t, setT] = useState(0);
+  // position/velocity as refs (smooth loop, no re-start)
+  const pxRef = useRef(14*TILE);
+  const pyRef = useRef(14*TILE);
+  const vxRef = useRef(0);
+  const vyRef = useRef(0);
+  const dirRef = useRef<0|1|2|3>(0);
+  const tRef = useRef(0);
   const [ready, setReady] = useState(false);
 
   // lock scroll
@@ -237,31 +231,32 @@ export default function World() {
     })();
   },[]);
 
-  // controls
+  // controls (update refs, don’t re-run loop)
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
       if (openPanel || openLine) return;
-      if (e.key === 'ArrowLeft' || e.key === 'a') { setVx(-1); setDir(1); }
-      if (e.key === 'ArrowRight'|| e.key === 'd') { setVx(1);  setDir(2); }
-      if (e.key === 'ArrowUp'   || e.key === 'w') { setVy(-1); setDir(3); }
-      if (e.key === 'ArrowDown' || e.key === 's') { setVy(1);  setDir(0); }
+      if (e.key === 'ArrowLeft' || e.key === 'a') { vxRef.current = -1; dirRef.current = 1; }
+      if (e.key === 'ArrowRight'|| e.key === 'd') { vxRef.current =  1; dirRef.current = 2; }
+      if (e.key === 'ArrowUp'   || e.key === 'w') { vyRef.current = -1; dirRef.current = 3; }
+      if (e.key === 'ArrowDown' || e.key === 's') { vyRef.current =  1; dirRef.current = 0; }
       if (e.key === 'e') interact();
     };
     const up = (e: KeyboardEvent) => {
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
-      if (['ArrowLeft','a'].includes(e.key) && vx<0) setVx(0);
-      if (['ArrowRight','d'].includes(e.key) && vx>0) setVx(0);
-      if (['ArrowUp','w'].includes(e.key) && vy<0) setVy(0);
-      if (['ArrowDown','s'].includes(e.key) && vy>0) setVy(0);
+      if (['ArrowLeft','a'].includes(e.key)  && vxRef.current < 0) vxRef.current = 0;
+      if (['ArrowRight','d'].includes(e.key) && vxRef.current > 0) vxRef.current = 0;
+      if (['ArrowUp','w'].includes(e.key)    && vyRef.current < 0) vyRef.current = 0;
+      if (['ArrowDown','s'].includes(e.key)  && vyRef.current > 0) vyRef.current = 0;
     };
     window.addEventListener('keydown', down, { passive:false });
     window.addEventListener('keyup', up, { passive:false });
     return () => { window.removeEventListener('keydown', down as any); window.removeEventListener('keyup', up as any); };
-  }, [vx,vy,openPanel,openLine]);
+  }, [openPanel,openLine]);
 
   const interact = () => {
-    // cats — larger radius so it always triggers
+    const px = pxRef.current, py = pyRef.current;
+    // cats (bigger radius)
     for(const c of CATS){
       if (Math.hypot(px - c.x, py - c.y) < 40){
         setOpenLine(`${c.line} — ${c.name}`);
@@ -274,33 +269,40 @@ export default function World() {
     if (hit) setOpenPanel(getPanel(hit.id) || null);
   };
 
-  // movement + drawing
+  // single rAF loop — no deps, smooth movement
   useEffect(() => {
     if (!ready) return;
-
     let raf = 0;
+
     const step = () => {
-      setT(v => (v+1)%9999);
+      tRef.current = (tRef.current + 1) % 9999;
 
-      let nx = px + vx*SPEED;
-      let ny = py + vy*SPEED;
+      // next positions
+      let nx = pxRef.current + vxRef.current * SPEED;
+      let ny = pyRef.current + vyRef.current * SPEED;
 
-      const col = (xx:number, yy:number) => MAP[ Math.floor(yy/TILE)*COLS + Math.floor(xx/TILE) ] === 1;
+      const col = (xx:number, yy:number) =>
+        MAP[ Math.floor(yy/TILE)*COLS + Math.floor(xx/TILE) ] === 1;
+
       const half = TILE*0.35;
 
-      const nxFeetX = nx, nxFeetY = py + half;
+      // X
+      const nxFeetX = nx;
+      const nxFeetY = pyRef.current + half;
       const canX = !(
-        col(nx-half, py-half) || col(nx+half, py-half) ||
-        col(nx-half, py+half) || col(nx+half, py+half)
+        col(nx-half, pyRef.current-half) || col(nx+half, pyRef.current-half) ||
+        col(nx-half, pyRef.current+half) || col(nx+half, pyRef.current+half)
       ) && !collidesWithProps(nxFeetX, nxFeetY);
-      if (canX) setPx(nx);
+      if (canX) pxRef.current = nx;
 
-      const nyFeetX = px, nyFeetY = ny + half;
+      // Y
+      const nyFeetX = pxRef.current;
+      const nyFeetY = ny + half;
       const canY = !(
-        col(px-half, ny-half) || col(px+half, ny-half) ||
-        col(px-half, ny+half) || col(px+half, ny+half)
+        col(pxRef.current-half, ny-half) || col(pxRef.current+half, ny-half) ||
+        col(pxRef.current-half, ny+half) || col(pxRef.current+half, ny+half)
       ) && !collidesWithProps(nyFeetX, nyFeetY);
-      if (canY) setPy(ny);
+      if (canY) pyRef.current = ny;
 
       draw();
       raf = requestAnimationFrame(step);
@@ -313,7 +315,7 @@ export default function World() {
       c.width = COLS*TILE; c.height = ROWS*TILE;
       ctx.imageSmoothingEnabled = false;
 
-      // soft checker (tile art coming later)
+      // soft checker (tiles will come later)
       ctx.fillStyle = '#fff7f6'; ctx.fillRect(0,0,c.width,c.height);
       for(let y=0;y<ROWS;y++){
         for(let x=0;x<COLS;x++){
@@ -323,6 +325,7 @@ export default function World() {
           }
         }
       }
+
       // walls
       for (let y=0;y<ROWS;y++){
         for (let x=0;x<COLS;x++){
@@ -333,7 +336,7 @@ export default function World() {
         }
       }
 
-      // hotspots
+      // room labels
       ctx.font = '12px "Courier Prime", monospace';
       HOTSPOTS.forEach(h=>{
         ctx.fillStyle = 'rgba(209, 120, 128, .10)';
@@ -342,29 +345,29 @@ export default function World() {
         ctx.fillText(h.label, h.x*TILE+3, h.y*TILE-4);
       });
 
-      // props (depth)
+      // props
       drawProps(ctx);
 
       // cats + player
       drawCat(ctx, catsRef.current.cookie, CATS[0].x, CATS[0].y);
       drawCat(ctx, catsRef.current.belle,  CATS[1].x, CATS[1].y);
-      drawIvana(ctx, ivanaFramesRef.current, px, py, dir, t);
+      drawIvana(ctx, ivanaFramesRef.current, pxRef.current, pyRef.current, dirRef.current, tRef.current);
 
       // hint
-      const nearCat = CATS.some(c => Math.hypot(px - c.x, py - c.y) < 40);
-      const tx = Math.floor(px/TILE), ty = Math.floor(py/TILE);
+      const nearCat = CATS.some(c => Math.hypot(pxRef.current - c.x, pyRef.current - c.y) < 40);
+      const tx = Math.floor(pxRef.current/TILE), ty = Math.floor(pyRef.current/TILE);
       const onRoom = HOTSPOTS.find(h => aabb(tx,ty,1,1, h.x,h.y,h.w,h.h));
       if (nearCat || onRoom){
         ctx.fillStyle = 'rgba(0,0,0,.08)';
-        ctx.fillRect(px-24, py-42, 48, 18);
+        ctx.fillRect(pxRef.current-24, pyRef.current-42, 48, 18);
         ctx.fillStyle = '#7d5e65';
-        ctx.fillText('Press E', px-18, py-29);
+        ctx.fillText('Press E', pxRef.current-18, pyRef.current-29);
       }
     };
 
     step();
     return () => cancelAnimationFrame(raf);
-  }, [px,py,vx,vy,ready]);
+  }, [ready]);
 
   return (
     <div className="px-4 py-6">
@@ -397,7 +400,7 @@ export default function World() {
   );
 }
 
-/* =============== UI bits =============== */
+/* ================= UI bits ================= */
 function PanelModal({panel,onClose}:{panel:Panel,onClose:()=>void}){
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
