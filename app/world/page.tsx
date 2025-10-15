@@ -62,16 +62,17 @@ const FOYER_RUG: Array<[number, number]> = [
   [15, 16], [16, 16], [17, 16],
 ];
 
-/** ===== Layout (hotspots) ===== */
+// ===== Layout (hotspots) =====
 type HS = { id: string; rect: Rect; label: string };
 
 const HOTSPOTS: HS[] = [
-  { id: 'library', rect: { x: 3, y: 4, w: 8, h: 7 }, label: 'Library' },
-  { id: 'study', rect: { x: 12, y: 4, w: 10, h: 7 }, label: 'Study' },
-  { id: 'workshop', rect: { x: 23, y: 4, w: 5, h: 7 }, label: 'Workshop' },
-  { id: 'lab', rect: { x: 3, y: 12, w: 10, h: 6 }, label: 'Lab' },
-  { id: 'coffee', rect: { x: 19, y: 12, w: 9, h: 6 }, label: 'Coffee' },
-  { id: 'garden', rect: { x: 3, y: 17, w: 25, h: 3 }, label: 'Garden' },
+  { id: 'library',  rect: { x: 3,  y: 4,  w: 8,  h: 7 },  label: 'Library' },
+  { id: 'study',    rect: { x: 12, y: 4,  w: 10, h: 7 },  label: 'Study' },
+  { id: 'workshop', rect: { x: 23, y: 4,  w: 5,  h: 7 },  label: 'Workshop' },
+  { id: 'lab',      rect: { x: 3,  y: 12, w: 10, h: 6 },  label: 'Lab' },
+  { id: 'coffee',   rect: { x: 19, y: 12, w: 9,  h: 6 },  label: 'Coffee' },
+  { id: 'garden',   rect: { x: 3,  y: 17, w: 25, h: 3 },  label: 'Garden' },
+  { id: 'foyer',    rect: FOYER,                          label: 'Foyer' }, // NEW
 ];
 
 const PROP_PATH = '/props/';
@@ -120,8 +121,8 @@ const MAP: number[] = (() => {
   }
   {
     const wk = HOTSPOTS.find(h => h.id === 'workshop')!.rect;
-    const y = wk.y + Math.floor(wk.h / 2) - 1;
-    for (let d = 0; d < DOOR; d++) g[ixy(wk.x, y + d)] = 0; // workshop left
+    const bx = wk.x + Math.floor(wk.w / 2) - 1;
+    for (let d = 0; d < DOOR; d++) g[ixy(bx + d, wk.y + wk.h - 1)] = 0; // workshop bottom
   }
   {
     const lb = HOTSPOTS.find(h => h.id === 'lab')!.rect;
@@ -278,6 +279,13 @@ export default function World() {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+       // Space toggles: close if anything open, else interact
+      if (e.key === ' ') {
+        if (openPanel) { setOpenPanel(null); return; }
+        if (openLine)  { setOpenLine(null);  return; }
+        interact();
+        return;
+      }
       if (openPanel || openLine) return;
       if (e.key === 'ArrowLeft' || e.key === 'a') { setVx(-1); setDir(1); }
       if (e.key === 'ArrowRight' || e.key === 'd') { setVx(1); setDir(2); }
@@ -434,8 +442,6 @@ export default function World() {
         ctx.fillStyle = '#7d5e65';
         ctx.fillText(h.label, h.rect.x * TILE + 3, h.rect.y * TILE - 4);
       });
-      ctx.fillStyle = '#7d5e65';
-      ctx.fillText('Foyer', FOYER.x * TILE + 3, FOYER.y * TILE - 4);
 
       // cats
       drawCat(ctx, catsRef.current.cookie, CATS[0].x, CATS[0].y);
@@ -515,13 +521,13 @@ export default function World() {
     <div className="px-4 py-6">
       <h1 className="text-2xl font-semibold mb-2">The Cozy House</h1>
       <p className="text-muted mb-3">
-        Move with WASD/Arrow keys. Stand on a room or near a cat and press <b>E</b>.
+        Move with WASD/Arrow keys. Stand on a room or near a cat and press <b>Space</b>.
       </p>
 
       <div className="relative overflow-auto border rounded-xl max-w-full" style={{ borderColor: "var(--border)" }}>
         <canvas ref={canvasRef} className="block mx-auto" style={{ imageRendering: 'pixelated' }} />
         <div className="absolute right-2 bottom-2">
-          <button onClick={() => interact()} className="btn">Interact (E)</button>
+          <button onClick={() => interact()} className="btn">Interact (Space)</button>
         </div>
       </div>
 
