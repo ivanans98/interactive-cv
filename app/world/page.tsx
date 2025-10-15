@@ -591,7 +591,27 @@ export default function World() {
 }
 
 /** ===== UI bits ===== */
-function PanelModal({ panel, onClose }: { panel: Panel, onClose: () => void }) {
+function PanelModal({ panel, onClose }: { panel: Panel; onClose: () => void }) {
+  // Group bullets by sections that start with "— "
+  function groupBullets(bullets: string[]) {
+    const groups: { title?: string; items: string[] }[] = [];
+    let current: { title?: string; items: string[] } | null = null;
+
+    for (const line of bullets) {
+      if (line.startsWith('— ')) {
+        if (current) groups.push(current);
+        current = { title: line.replace(/^—\s*/, ''), items: [] };
+      } else {
+        if (!current) current = { items: [] };
+        current.items.push(line);
+      }
+    }
+    if (current) groups.push(current);
+    return groups;
+  }
+
+  const sections = groupBullets(panel.bullets);
+
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="panel max-w-3xl w-full p-5">
@@ -603,15 +623,28 @@ function PanelModal({ panel, onClose }: { panel: Panel, onClose: () => void }) {
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr,220px] gap-5 items-start">
           {/* Left: text */}
           <div>
-            <ul className="list-disc pl-5 space-y-1">
-              {panel.bullets.map((b, i) => <li key={i}>{b}</li>)}
-            </ul>
+            {/* ⬇️ Replaces the old single <ul> */}
+            {sections.map((sec, i) => (
+              <div key={i} className={i > 0 ? 'mt-3' : ''}>
+                {sec.title && (
+                  <div className="font-semibold mb-1">{sec.title}</div>
+                )}
+                <ul className="list-disc pl-5 space-y-1">
+                  {sec.items.map((item, j) => (
+                    <li key={j}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
 
             {panel.chips && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {panel.chips.map(c => (
-                  <span key={c} className="text-xs px-2 py-1 rounded-full"
-                    style={{ border: "1px solid var(--border)", color: "var(--muted)" }}>
+                  <span
+                    key={c}
+                    className="text-xs px-2 py-1 rounded-full"
+                    style={{ border: '1px solid var(--border)', color: 'var(--muted)' }}
+                  >
                     {c}
                   </span>
                 ))}
@@ -621,13 +654,21 @@ function PanelModal({ panel, onClose }: { panel: Panel, onClose: () => void }) {
             {panel.ctas && (
               <div className="mt-4 flex flex-wrap gap-3">
                 {panel.ctas.map(c => (
-                  <a key={c.label} href={c.href} {...(c.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                    className="btn">{c.label}</a>
+                  <a
+                    key={c.label}
+                    href={c.href}
+                    {...(c.external ? { target: '_blank', rel: 'noreferrer' } : {})}
+                    className="btn"
+                  >
+                    {c.label}
+                  </a>
                 ))}
               </div>
             )}
 
-            <p className="text-xs text-muted mt-4">Tip: press <b>Space</b> to close.</p>
+            <p className="text-xs text-muted mt-4">
+              Tip: press <b>Space</b> to close.
+            </p>
           </div>
 
           {/* Right: image (optional) */}
@@ -636,9 +677,9 @@ function PanelModal({ panel, onClose }: { panel: Panel, onClose: () => void }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={panel.imgUrl}
-                alt={panel.imgAlt || ""}
+                alt={panel.imgAlt || ''}
                 className="w-[220px] h-[220px] object-cover rounded-xl border"
-                style={{ borderColor: "var(--border)" }}
+                style={{ borderColor: 'var(--border)' }}
               />
             </figure>
           )}
@@ -647,7 +688,6 @@ function PanelModal({ panel, onClose }: { panel: Panel, onClose: () => void }) {
     </div>
   );
 }
-
 
 function Bubble({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
