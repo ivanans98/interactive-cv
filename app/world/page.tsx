@@ -584,38 +584,61 @@ export default function World() {
 /** ===== UI bits ===== */
 function PanelModal({ panel, onClose }: { panel: Panel, onClose: () => void }) {
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <div className="panel max-w-xl w-full p-5" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="panel max-w-3xl w-full p-5">
         <div className="flex items-start justify-between gap-4">
           <h2 className="text-xl font-medium">{panel.title}</h2>
           <button onClick={onClose} className="btn">Close</button>
         </div>
-        <ul className="list-disc pl-5 mt-3 space-y-1">
-          {panel.bullets.map((b, i) => <li key={i}>{b}</li>)}
-        </ul>
-        {panel.chips && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {panel.chips.map(c => (
-              <span key={c} className="text-xs px-2 py-1 rounded-full"
-                style={{ border: '1px solid var(--border)', color: 'var(--muted)' }}>
-                {c}
-              </span>
-            ))}
+
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr,220px] gap-5 items-start">
+          {/* Left: text */}
+          <div>
+            <ul className="list-disc pl-5 space-y-1">
+              {panel.bullets.map((b, i) => <li key={i}>{b}</li>)}
+            </ul>
+
+            {panel.chips && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {panel.chips.map(c => (
+                  <span key={c} className="text-xs px-2 py-1 rounded-full"
+                    style={{ border: "1px solid var(--border)", color: "var(--muted)" }}>
+                    {c}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {panel.ctas && (
+              <div className="mt-4 flex flex-wrap gap-3">
+                {panel.ctas.map(c => (
+                  <a key={c.label} href={c.href} {...(c.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                    className="btn">{c.label}</a>
+                ))}
+              </div>
+            )}
+
+            <p className="text-xs text-muted mt-4">Tip: press <b>Space</b> to close.</p>
           </div>
-        )}
-        {panel.ctas && (
-          <div className="mt-4 flex flex-wrap gap-3">
-            {panel.ctas.map(c => (
-              <a key={c.label} href={c.href} {...(c.external ? { target: '_blank', rel: 'noreferrer' } : {})}
-                className="btn">{c.label}</a>
-            ))}
-          </div>
-        )}
-        <div className="text-muted text-xs mt-4">Tip: press <b>Space</b> to close.</div>
+
+          {/* Right: image (optional) */}
+          {panel.imgUrl && (
+            <figure className="justify-self-end">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={panel.imgUrl}
+                alt={panel.imgAlt || ""}
+                className="w-[220px] h-[220px] object-cover rounded-xl border"
+                style={{ borderColor: "var(--border)" }}
+              />
+            </figure>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+
 
 function Bubble({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
