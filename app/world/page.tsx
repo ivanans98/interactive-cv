@@ -33,8 +33,11 @@ const TILE_IDX = {
 
 /** grid coordinates within tiles.png (col,row) */
 const TILESET = {
-  parquet: [2, 0], // room wood
-  rug1: [1, 0],    // foyer rug
+  parquet: [2, 0], 
+  rug1: [1, 0],    
+  grass:   [4,0],   
+  flowers: [5,0],   
+  stone:   [0,0],   
 };
 
 type Rect = { x: number; y: number; w: number; h: number }; // grid cells
@@ -49,14 +52,14 @@ const ROOMS: Rect[] = [
   // garden is not parquet; it’s outside path/green
 ];
 
-/** Foyer area is separate and will be tiled with rug */
-const FOYER: Rect = { x: 13, y: 8, w: 4, h: 4 };
+/** Foyer area */
+const FOYER: Rect = { x: 15, y: 14, w: 3, h: 3 };
 
 /** Explicit foyer rug cells so it never touches door tiles */
 const FOYER_RUG: Array<[number, number]> = [
-  [20, 16],[21, 16],[22, 16],
-  [20, 17],[21, 17],[22, 17],
-  [20, 18],[21, 18],[22, 18],
+  [15, 14],[16, 14],[17, 14],
+  [15, 15],[16, 15],[17, 15],
+  [15, 16],[16, 16],[17, 16],
 ];
 
 /** ===== Layout (hotspots) ===== */
@@ -237,11 +240,17 @@ export default function World() {
 
       // props
       const names = [
-        'bookshelf1_32x48.png', 'bookshelf2_32x48.png', 'plant_16x36.png',
-        'desk_48x40.png', 'chair_16x24.png', 'coffee_machine_16x22.png',
-        'laptop_16x16.png', 'sofa_48x32.png', 'lamp_16x44.png',
-        'coffee_table_32x20.png', 'bed_32x44.png', 'fountain_64x64.png'
-      ];
+      'bookshelf1_32x48.png','bookshelf2_32x48.png','plant_16x36.png',
+      'desk_48x40.png','chair_16x24.png','coffee_machine_16x22.png',
+      'laptop_16x16.png','sofa_48x32.png','lamp_16x44.png',
+      'coffee_table_32x20.png','bed_32x44.png','fountain_64x64.png',
+      // NEW props
+      'side_table_16x16.png','workbench_48x32.png','tool_cabinet_32x32.png',
+      'whiteboard_32x48.png','mug_rack_16x16.png','plant_counter_16x16.png',
+      'coat_rack_16x40.png','shoe_rack_32x32.png','umbrella_stand_16x32.png',
+      'tree_small_32x32.png','bench_48x48.png'
+    ];
+
       const imgs = await Promise.all(names.map(n => load(PROP_PATH + n)));
       const dict: Record<string, HTMLImageElement> = {};
       names.forEach((n, i) => { dict[n] = imgs[i]; });
@@ -385,6 +394,27 @@ export default function World() {
         }
       }
 
+      // Garden ground: grass with sprinkled flowers
+      const gd = HOTSPOTS.find(h => h.id === 'garden')!.rect;
+      for (let yy = gd.y; yy < gd.y + gd.h; yy++) {
+        for (let xx = gd.x; xx < gd.x + gd.w; xx++) {
+          const [gx, gy] = TILESET.grass;
+          drawSheetTile(ctx, gx, gy, xx, yy);
+          // scatter flowers lightly
+          if ((xx + yy) % 5 === 0) {
+            const [fx, fy] = TILESET.flowers;
+            drawSheetTile(ctx, fx, fy, xx, yy);
+          }
+        }
+      }
+      // stone path through the center of garden
+      const mid = gd.y + Math.floor(gd.h/2);
+      for (let xx = gd.x; xx < gd.x + gd.w; xx++) {
+        const [sx, sy] = TILESET.stone;
+        drawSheetTile(ctx, sx, sy, xx, mid);
+      }
+
+
       // labels
       ctx.font = '12px "Courier Prime", monospace';
       HOTSPOTS.forEach(h => {
@@ -401,14 +431,21 @@ export default function World() {
       // ===== props (draw every frame if loaded) =====
       const P = propsRef.current;
 
+      // --- Foyer decor (near the new rug)
+      if (P['side_table_16x16.png'])     ctx.drawImage(P['side_table_16x16.png'], (FOYER.x-1)*TILE, (FOYER.y+1)*TILE);
+      if (P['coat_rack_16x40.png'])      ctx.drawImage(P['coat_rack_16x40.png'],  (FOYER.x+FOYER.w)*TILE, (FOYER.y)*TILE-8);
+      if (P['shoe_rack_32x32.png'])      ctx.drawImage(P['shoe_rack_32x16.png'],  (FOYER.x+1)*TILE, (FOYER.y+FOYER.h)*TILE+4);
+      if (P['umbrella_stand_16x32.png']) ctx.drawImage(P['umbrella_stand_16x24.png'], (FOYER.x)*TILE-4, (FOYER.y+FOYER.h)*TILE-6);
+      
       // Library — full top row
       const lib = HOTSPOTS.find(h => h.id === 'library')!.rect;
-      if (P['bookshelf1_32x48.png']) ctx.drawImage(P['bookshelf1_32x48.png'], (lib.x + 1) * TILE, (lib.y + 1) * TILE - 16);
-      if (P['bookshelf2_32x48.png']) ctx.drawImage(P['bookshelf2_32x48.png'], (lib.x + 2) * TILE, (lib.y + 1) * TILE - 16);
-      if (P['bookshelf1_32x48.png']) ctx.drawImage(P['bookshelf1_32x48.png'], (lib.x + 3) * TILE, (lib.y + 1) * TILE - 16);
-      if (P['bookshelf2_32x48.png']) ctx.drawImage(P['bookshelf2_32x48.png'], (lib.x + 4) * TILE, (lib.y + 1) * TILE - 16);
-      if (P['bookshelf1_32x48.png']) ctx.drawImage(P['bookshelf1_32x48.png'], (lib.x + 5) * TILE, (lib.y + 1) * TILE - 16);
-      if (P['plant_16x36.png'])      ctx.drawImage(P['plant_16x36.png'],      (lib.x + lib.w - 2) * TILE, (lib.y + lib.h - 2) * TILE - 4);
+      if (P['bookshelf1_32x48.png']) ctx.drawImage(P['bookshelf1_32x48.png'], (lib.x+1)*TILE, (lib.y+1)*TILE-16);
+      if (P['bookshelf2_32x48.png']) ctx.drawImage(P['bookshelf2_32x48.png'], (lib.x+2)*TILE, (lib.y+1)*TILE-16);
+      if (P['bookshelf1_32x48.png']) ctx.drawImage(P['bookshelf1_32x48.png'], (lib.x+3)*TILE, (lib.y+1)*TILE-16);
+      if (P['bookshelf2_32x48.png']) ctx.drawImage(P['bookshelf2_32x48.png'], (lib.x+4)*TILE, (lib.y+1)*TILE-16);
+      if (P['bookshelf1_32x48.png']) ctx.drawImage(P['bookshelf1_32x48.png'], (lib.x+5)*TILE, (lib.y+1)*TILE-16);
+      if (P['bookshelf2_32x48.png']) ctx.drawImage(P['bookshelf2_32x48.png'], (lib.x+6)*TILE, (lib.y+1)*TILE-16);
+      if (P['plant_16x36.png'])      ctx.drawImage(P['plant_16x36.png'],      (lib.x+lib.w-2)*TILE, (lib.y+lib.h-2)*TILE-4);
 
       // Study
       const st = HOTSPOTS.find(h => h.id === 'study')!.rect;
@@ -422,7 +459,16 @@ export default function World() {
       if (P['sofa_48x32.png'])         ctx.drawImage(P['sofa_48x32.png'],         (cf.x + Math.floor(cf.w / 2) - 1) * TILE, (cf.y + Math.floor(cf.h / 2)) * TILE);
       if (P['lamp_16x44.png'])         ctx.drawImage(P['lamp_16x44.png'],         (cf.x + cf.w - 2) * TILE + 8, (cf.y + Math.floor(cf.h / 2)) * TILE - 12);
       if (P['coffee_table_32x20.png']) ctx.drawImage(P['coffee_table_32x20.png'], (cf.x + Math.floor(cf.w / 2)) * TILE, (cf.y + Math.floor(cf.h / 2) + 1) * TILE);
-
+      if (P['side_table_16x16.png'])     ctx.drawImage(P['side_table_16x16.png'], (cf.x+Math.floor(cf.w/2)-2)*TILE, (cf.y+Math.floor(cf.h/2)+1)*TILE);
+      
+      // --- Workshop corner
+      const wk = HOTSPOTS.find(h=>h.id==='workshop')!.rect;
+      if (P['workbench_48x32.png'])      ctx.drawImage(P['workbench_48x32.png'],   (wk.x+1)*TILE, (wk.y+2)*TILE);
+      if (P['tool_cabinet_32x32.png'])   ctx.drawImage(P['tool_cabinet_32x32.png'],(wk.x+wk.w-3)*TILE, (wk.y+2)*TILE);
+      if (P['whiteboard_32x48.png'])     ctx.drawImage(P['whiteboard_48x32.png'],  (wk.x+1)*TILE, (wk.y+1)*TILE-8);
+      if (P['mug_rack_16x16.png'])       ctx.drawImage(P['mug_rack_16x16.png'],    (wk.x+2)*TILE+8, (wk.y+1)*TILE);
+      if (P['plant_counter_16x16.png'])  ctx.drawImage(P['plant_counter_16x16.png'], (wk.x+wk.w-2)*TILE, (wk.y+wk.h-2)*TILE);
+      
       // Lab
       const lb = HOTSPOTS.find(h => h.id === 'lab')!.rect;
       if (P['bed_32x44.png'])           ctx.drawImage(P['bed_32x44.png'],           (lb.x + lb.w - 3) * TILE, (lb.y + lb.h - 3) * TILE - 12);
@@ -430,6 +476,8 @@ export default function World() {
       // Garden (fountain left-aligned so door stays free)
       const gd = HOTSPOTS.find(h => h.id === 'garden')!.rect;
       if (P['fountain_64x64.png'])      ctx.drawImage(P['fountain_64x64.png'],      (gd.x + 1) * TILE, (gd.y + Math.floor(gd.h / 2)) * TILE - 16, 64, 64);
+      if (P['tree_small_32x32.png'])     ctx.drawImage(P['tree_small_32x48.png'], (gd.x+gd.w-3)*TILE, (gd.y)*TILE-16);
+      if (P['bench_48x48.png'])          ctx.drawImage(P['bench_48x24.png'],      (gd.x+gd.w-6)*TILE, (gd.y+Math.floor(gd.h/2))*TILE+8);
 
       // Ivana
       drawIvana(ctx, ivanaFramesRef.current, px, py, dir, t);
