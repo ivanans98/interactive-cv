@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { PANELS, getPanel, type Panel } from './panels';
+import PROPS, { type Prop } from './props';
 
 /* =============== World constants =============== */
 const TILE = 32;
@@ -9,7 +10,7 @@ const COLS = 30;
 const ROWS = 20;
 const SPEED = 2.0;
 
-type HS = { id:string; x:number; y:number; w:number; h:number; label:string }
+type HS = { id:string; x:number; y:number; w:number; h:number; label:string };
 const HOTSPOTS: HS[] = [
   { id:'foyer',   x:14, y:10, w:2, h:2, label:'Foyer' },
   { id:'lab',     x:5,  y:4,  w:6, h:4, label:'Lab' },
@@ -19,13 +20,13 @@ const HOTSPOTS: HS[] = [
   { id:'ai-den',  x:12, y:3,  w:6, h:3, label:'AI Den' },
   { id:'library', x:3,  y:9,  w:4, h:3, label:'Library' },
   { id:'coffee',  x:23, y:9,  w:4, h:3, label:'Coffee' },
-  { id:'garden',  x:14, y:17, w:2, h:1, label:'Garden' },
+  { id:'garden',  x:12, y:15, w:6, h:4, label:'Garden' },
 ];
 
 type NPC = { name:string; x:number; y:number; line:string };
 const CATS: NPC[] = [
-  { name: 'Cookie', x: 23*TILE+TILE*0.5, y: 10*TILE+TILE*0.5, line: 'Hi! I‘m Cookie 🐾' },
-  { name: 'Belle',  x:  7*TILE+TILE*0.5, y: 10*TILE+TILE*0.5, line: 'Hi! I‘m Belle 🐾' },
+  { name: 'Cookie', x: 24*TILE+TILE*0.5, y:  9*TILE+TILE*0.5, line: 'Hi! I‘m Cookie 🐾' },
+  { name: 'Belle',  x:  8*TILE+TILE*0.5, y: 11*TILE+TILE*0.5, line: 'Hi! I‘m Belle 🐾' },
 ];
 
 /* =============== helpers =============== */
@@ -37,13 +38,13 @@ function aabb(ax:number,ay:number,aw:number,ah:number, bx:number,by:number,bw:nu
 /* =============== simple house map: 0 floor, 1 wall =============== */
 const MAP:number[] = (() => {
   const g = Array(ROWS*COLS).fill(0);
-  // outer frame
-  for (let x=0;x<COLS;x++){ g[ixy(x,0)]=1; g[ixy(x,ROWS-1)]=1; }
-  for (let y=0;y<ROWS;y++){ g[ixy(0,y)]=1; g[ixy(COLS-1,y)]=1; }
-
-  // corridors + room frames
   const wall = (x:number,y:number)=>{ g[ixy(x,y)]=1; };
-  // horizontal spine
+
+  // outer frame
+  for (let x=0;x<COLS;x++){ wall(x,0); wall(x,ROWS-1); }
+  for (let y=0;y<ROWS;y++){ wall(0,y); wall(COLS-1,y); }
+
+  // corridor spine
   for (let x=6;x<COLS-6;x++) wall(x, 10);
   // vertical to garden
   for (let y=10;y<ROWS-2;y++) wall(15,y);
@@ -52,41 +53,34 @@ const MAP:number[] = (() => {
     for(let i=x;i<x+w;i++){ wall(i,y); wall(i,y+h-1); }
     for(let j=y;j<y+h;j++){ wall(x,j); wall(x+w-1,j); }
   };
-  // frames
-  frame(5,4,6,4);     // lab
-  frame(20,4,6,4);    // techauto
-  frame(5,13,6,4);    // stabilus
-  frame(20,13,6,4);   // study
-  frame(12,3,6,3);    // ai-den
-  frame(3,9,4,3);     // library
-  frame(23,9,4,3);    // coffee
-  frame(14,17,2,1);   // garden edge
 
-  // door gaps into each room (open access)
-  g[ixy(15,10)] = 0; // corridor gap (right of center)
-  g[ixy(14,10)] = 0; // corridor gap (left of center)
+  // room frames
+  frame(5,4,6,4);      // lab
+  frame(20,4,6,4);     // techauto
+  frame(5,13,6,4);     // stabilus
+  frame(20,13,6,4);    // study
+  frame(12,3,6,3);     // ai-den
+  frame(3,9,4,3);      // library
+  frame(23,9,4,3);     // coffee
+  frame(12,15,6,4);    // garden (bigger)
 
-  // lab bottom door (center)
-  g[ixy(8,7)] = 0;
-  // tech-auto bottom door (center)
-  g[ixy(23,7)] = 0;
-  // stabilus top door (center)
-  g[ixy(8,13)] = 0;
-  // study top door (center)
-  g[ixy(23,13)] = 0;
-  // ai-den bottom door (center)
-  g[ixy(15,5)] = 0;
-  // library right door (onto spine at y=10)
-  g[ixy(6,10)] = 0;
-  // coffee left door (onto spine at y=10)
-  g[ixy(23,10)] = 0;
+  // corridor gaps
+  g[ixy(15,10)]=0; g[ixy(14,10)]=0;
+
+  // doors into rooms (centers)
+  g[ixy(8,  7 )]=0; // lab bottom
+  g[ixy(23, 7 )]=0; // techauto bottom
+  g[ixy(8,  13)]=0; // stabilus top
+  g[ixy(23, 13)]=0; // study top
+  g[ixy(15, 5 )]=0; // ai-den bottom
+  g[ixy(6,  10)]=0; // library right → spine
+  g[ixy(23, 10)]=0; // coffee left → spine
+  g[ixy(15, 15)]=0; // garden top (from vertical)
 
   return g;
 })();
 
-/* =============== Procedural pixel sprites ===============
- * Ivana (12 frames) + two cats. No external images needed.
- */
+/* =============== Procedural pixel sprites =============== */
 function makeIvanaFrames() {
   const frames:HTMLCanvasElement[] = [];
   const drawOne = (dir:0|1|2|3, step:0|1|2) => {
@@ -94,20 +88,18 @@ function makeIvanaFrames() {
     c.width = 16; c.height = 16;
     const ctx = c.getContext('2d')!;
     const hair = '#2a1b1f';
-    const skin = '#c89aa4'; // lighter skin tone (~50% lighter than before)
+    const skin = '#c89aa4'; // lighter
     const blush='#d07a85', dress='#e59aa7', trim='#fff2f2', shoes='#2a1b1f';
     const leg = step===1? 1 : 0;
 
     // hair
-    ctx.fillStyle = hair; ctx.fillRect(3,2,10,7);
-    ctx.fillRect(2,5,12,3);
+    ctx.fillStyle = hair; ctx.fillRect(3,2,10,7); ctx.fillRect(2,5,12,3);
     // face
     ctx.fillStyle = skin; ctx.fillRect(6,5,4,4);
-    // blush
+    // blush + eyes
     ctx.fillStyle = blush; ctx.fillRect(5,7,1,1); ctx.fillRect(10,7,1,1);
-    // eyes
     ctx.fillStyle = '#1a1214'; ctx.fillRect(7,6,1,1); ctx.fillRect(9,6,1,1);
-    // dress & collar
+    // dress + collar
     ctx.fillStyle = dress; ctx.fillRect(5,9,6,4);
     ctx.fillStyle = trim;  ctx.fillRect(5,9,6,1);
     // arms
@@ -149,12 +141,9 @@ function drawCat(ctx:CanvasRenderingContext2D, img:HTMLCanvasElement, x:number,y
   ctx.drawImage(img, Math.round(x)-14, Math.round(y)-14, 28, 28);
 }
 
-/* =============== Props: images & placement =============== */
-import PROPS, { type Prop } from './props';
-
+/* =============== Prop images =============== */
 type ImgRef = { el: HTMLImageElement, w: number, h: number };
 const propImgs = new Map<string, ImgRef>();
-
 function loadImage(src: string): Promise<ImgRef> {
   return new Promise((resolve, reject) => {
     const el = new Image();
@@ -163,19 +152,16 @@ function loadImage(src: string): Promise<ImgRef> {
     el.src = src;
   });
 }
-
-// depth sort & draw props
 function drawProps(ctx: CanvasRenderingContext2D) {
   const items = PROPS.map(p => {
     const ir = propImgs.get(p.img)!;
     const px = p.x * TILE;
     const py = p.y * TILE;
-    const drawX = Math.round(px - ir.w / 2 + TILE / 2); // bottom-center anchor
+    const drawX = Math.round(px - ir.w / 2 + TILE / 2);
     const drawY = Math.round(py - ir.h + TILE);
     return { p, ir, drawX, drawY, z: drawY + ir.h };
   });
 
-  // wall layer (decorations attached to walls)
   for (const it of items) {
     if (it.p.layer === 'wall') {
       ctx.imageSmoothingEnabled = false;
@@ -183,7 +169,6 @@ function drawProps(ctx: CanvasRenderingContext2D) {
     }
   }
 
-  // floor props (depth sorted)
   items
     .filter(it => !it.p.layer || it.p.layer === 'floor')
     .sort((a, b) => a.z - b.z)
@@ -192,7 +177,6 @@ function drawProps(ctx: CanvasRenderingContext2D) {
       ctx.drawImage(it.ir.el, it.drawX, it.drawY);
     });
 
-  // tabletop props last (do not collide)
   for (const it of items) {
     if (it.p.layer === 'tabletop') {
       ctx.imageSmoothingEnabled = false;
@@ -200,8 +184,6 @@ function drawProps(ctx: CanvasRenderingContext2D) {
     }
   }
 }
-
-// feet-point collision against prop footprints
 function collidesWithProps(feetX: number, feetY: number): boolean {
   for (const p of PROPS) {
     if (p.layer === 'tabletop' || p.layer === 'wall') continue;
@@ -210,17 +192,10 @@ function collidesWithProps(feetX: number, feetY: number): boolean {
     const sy = p.y * TILE - ir.h + TILE;
     const sw = ir.w;
     const sh = ir.h;
-
-    const fp = p.fp ?? 0; // height of blocking band at bottom
+    const fp = p.fp ?? 0;
     if (fp > 0) {
-      const fx = sx;
-      const fy = sy + sh - fp;
-      const fw = sw;
-      const fh = fp;
-
-      if (feetX >= fx && feetX <= fx + fw && feetY >= fy && feetY <= fy + fh) {
-        return true;
-      }
+      const fx = sx, fy = sy + sh - fp, fw = sw, fh = fp;
+      if (feetX >= fx && feetX <= fx + fw && feetY >= fy && feetY <= fy + fh) return true;
     }
   }
   return false;
@@ -238,38 +213,31 @@ export default function World() {
   const [vx, setVx] = useState(0);
   const [vy, setVy] = useState(0);
   const [dir, setDir] = useState<0|1|2|3>(0);
-  const [t, setT] = useState(0); // animation clock
-
-  // when assets ready
+  const [t, setT] = useState(0);
   const [ready, setReady] = useState(false);
 
-  // lock body scroll only while this page is mounted
+  // lock scroll
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  // generate sprites & preload prop images once
+  // sprites + props
   const ivanaFramesRef = useRef<HTMLCanvasElement[]|null>(null);
   const catsRef = useRef<{cookie:HTMLCanvasElement, belle:HTMLCanvasElement}|null>(null);
   useEffect(()=>{
     ivanaFramesRef.current = makeIvanaFrames();
     catsRef.current = { cookie: makeCat('#e2a05a'), belle: makeCat('#e7b16a') };
-
     (async () => {
-      await Promise.all(
-        PROPS.map(async p => {
-          if (!propImgs.has(p.img)) {
-            propImgs.set(p.img, await loadImage(p.img));
-          }
-        })
-      );
+      await Promise.all(PROPS.map(async p => {
+        if (!propImgs.has(p.img)) propImgs.set(p.img, await loadImage(p.img));
+      }));
       setReady(true);
     })();
   },[]);
 
-  // controls (prevent page scroll on arrow keys)
+  // controls
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
@@ -293,14 +261,14 @@ export default function World() {
   }, [vx,vy,openPanel,openLine]);
 
   const interact = () => {
-    // talk to a nearby cat?
+    // cats — larger radius so it always triggers
     for(const c of CATS){
-      if (Math.hypot(px - c.x, py - c.y) < 28){
+      if (Math.hypot(px - c.x, py - c.y) < 40){
         setOpenLine(`${c.line} — ${c.name}`);
         return;
       }
     }
-    // or open a room panel
+    // rooms
     const tx = Math.floor(px/TILE), ty = Math.floor(py/TILE);
     const hit = HOTSPOTS.find(h => aabb(tx,ty,1,1, h.x,h.y,h.w,h.h));
     if (hit) setOpenPanel(getPanel(hit.id) || null);
@@ -308,7 +276,7 @@ export default function World() {
 
   // movement + drawing
   useEffect(() => {
-    if (!ready) return; // wait for props to load
+    if (!ready) return;
 
     let raf = 0;
     const step = () => {
@@ -320,18 +288,14 @@ export default function World() {
       const col = (xx:number, yy:number) => MAP[ Math.floor(yy/TILE)*COLS + Math.floor(xx/TILE) ] === 1;
       const half = TILE*0.35;
 
-      // try X
-      const nxFeetX = nx;                 // bottom-center x
-      const nxFeetY = py + half;          // approximate feet y
+      const nxFeetX = nx, nxFeetY = py + half;
       const canX = !(
         col(nx-half, py-half) || col(nx+half, py-half) ||
         col(nx-half, py+half) || col(nx+half, py+half)
       ) && !collidesWithProps(nxFeetX, nxFeetY);
       if (canX) setPx(nx);
 
-      // try Y
-      const nyFeetX = px;                 // bottom-center x
-      const nyFeetY = ny + half;          // approximate feet y
+      const nyFeetX = px, nyFeetY = ny + half;
       const canY = !(
         col(px-half, ny-half) || col(px+half, ny-half) ||
         col(px-half, ny+half) || col(px+half, ny+half)
@@ -349,7 +313,7 @@ export default function World() {
       c.width = COLS*TILE; c.height = ROWS*TILE;
       ctx.imageSmoothingEnabled = false;
 
-      // soft checkered base (until we switch to tiles.png everywhere)
+      // soft checker (tile art coming later)
       ctx.fillStyle = '#fff7f6'; ctx.fillRect(0,0,c.width,c.height);
       for(let y=0;y<ROWS;y++){
         for(let x=0;x<COLS;x++){
@@ -369,7 +333,7 @@ export default function World() {
         }
       }
 
-      // hotspots + labels
+      // hotspots
       ctx.font = '12px "Courier Prime", monospace';
       HOTSPOTS.forEach(h=>{
         ctx.fillStyle = 'rgba(209, 120, 128, .10)';
@@ -378,18 +342,16 @@ export default function World() {
         ctx.fillText(h.label, h.x*TILE+3, h.y*TILE-4);
       });
 
-      // props (depth sorted)
+      // props (depth)
       drawProps(ctx);
 
-      // cats
+      // cats + player
       drawCat(ctx, catsRef.current.cookie, CATS[0].x, CATS[0].y);
       drawCat(ctx, catsRef.current.belle,  CATS[1].x, CATS[1].y);
-
-      // ivana
       drawIvana(ctx, ivanaFramesRef.current, px, py, dir, t);
 
-      // interaction hint
-      const nearCat = CATS.some(c => Math.hypot(px - c.x, py - c.y) < 30);
+      // hint
+      const nearCat = CATS.some(c => Math.hypot(px - c.x, py - c.y) < 40);
       const tx = Math.floor(px/TILE), ty = Math.floor(py/TILE);
       const onRoom = HOTSPOTS.find(h => aabb(tx,ty,1,1, h.x,h.y,h.w,h.h));
       if (nearCat || onRoom){
@@ -402,7 +364,6 @@ export default function World() {
 
     step();
     return () => cancelAnimationFrame(raf);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [px,py,vx,vy,ready]);
 
   return (
@@ -417,15 +378,12 @@ export default function World() {
         <canvas ref={canvasRef}
                 className="block mx-auto"
                 style={{ imageRendering:'pixelated' }} />
-        {/* Mobile button */}
         <div className="absolute right-2 bottom-2">
           <button onClick={()=>interact()} className="btn">Interact (E)</button>
         </div>
       </div>
 
-      {/* Room modal */}
       {openPanel && <PanelModal panel={openPanel} onClose={()=>setOpenPanel(null)} />}
-      {/* Cat bubble */}
       {openLine && (
         <Bubble onClose={()=>setOpenLine(null)}>
           {openLine}
