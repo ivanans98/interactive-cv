@@ -1,18 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { PANELS, getPanel, type Panel } from './panels';
+import { getPanel, type Panel } from './panels';
 
 /** ===== World constants ===== */
 const TILE = 32;
 const COLS = 30;
 const ROWS = 20;
 const SPEED = 2.0;
-const DOOR = 2; // two-tile doors
+const DOOR = 2;
 
-// source tilesheet meta (your /public/tiles.png)
-// layout you gave: first row (0..6), second row (7..13)
-// we only need parquet and rug1 here.
+/** ===== tiles.png meta (your spritesheet) ===== */
 const SRC_TILE = 16;
 const TILE_IDX = {
   stone_path: 0,
@@ -31,9 +29,10 @@ const TILE_IDX = {
   wall_R: 13,
 };
 
+/** ===== Layout ===== */
 type Rect = { x:number; y:number; w:number; h:number };
+type HS = { id:string; rect:Rect; label:string };
 
-type HS = { id:string; rect:Rect; label:string }
 const HOTSPOTS: HS[] = [
   { id:'library',  rect:{ x:3,  y:4,  w:8,  h:7 },  label:'Library' },
   { id:'study',    rect:{ x:12, y:4,  w:10, h:7 },  label:'Study' },
@@ -43,14 +42,13 @@ const HOTSPOTS: HS[] = [
   { id:'garden',   rect:{ x:3,  y:17, w:25, h:3 },  label:'Garden' },
 ];
 
-const FOYER: Rect = { x:13, y:8, w:4, h:4 }; // tiled with rug1
+const FOYER: Rect = { x:13, y:8, w:4, h:4 };
 
+/** ===== NPCs ===== */
 type NPC = { name:string; x:number; y:number; line:string };
 const CATS: NPC[] = [
-  // near coffee corridor, but not blocking
   { name: 'Cookie', x: (22.5)*TILE, y: (11.5)*TILE, line: 'Hi! I‘m Cookie 🐾' },
-  // near library corridor, but not blocking
-  { name: 'Belle',  x: (9.5)*TILE,  y: (11.5)*TILE, line: 'Hi! I‘m Belle 🐾' },
+  { name: 'Belle',  x: ( 9.5)*TILE, y: (11.5)*TILE, line: 'Hi! I‘m Belle 🐾' },
 ];
 
 /** ===== helpers ===== */
@@ -58,13 +56,11 @@ const ixy = (x:number,y:number)=> y*COLS + x;
 function aabb(ax:number,ay:number,aw:number,ah:number, bx:number,by:number,bw:number,bh:number){
   return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
 }
-const inside = (r:Rect, x:number, y:number) =>
-  x>=r.x && x<r.x+r.w && y>=r.y && y<r.y+r.h;
 
-/** ===== Map building: 0 floor, 1 wall ===== */
+/** ===== Walls map (0 floor, 1 wall) ===== */
 const MAP:number[] = (() => {
   const g = Array(ROWS*COLS).fill(0);
-  const wall = (x:number,y:number)=>{ if (x>=0 && y>=0 && x<COLS && y<ROWS) g[ixy(x,y)] = 1; };
+  const wall = (x:number,y:number)=>{ if (x>=0&&y>=0&&x<COLS&&y<ROWS) g[ixy(x,y)]=1; };
 
   // outer frame
   for (let x=0;x<COLS;x++){ wall(x,0); wall(x,ROWS-1); }
@@ -75,53 +71,46 @@ const MAP:number[] = (() => {
     for(let y=r.y; y<r.y+r.h; y++){ wall(r.x,y); wall(r.x+r.w-1,y); }
   };
 
-  // draw room frames
   HOTSPOTS.forEach(h => frame(h.rect));
 
-  // --- Doors (2-tile each) ---
-  // Library -> corridor: right wall opening (also connects into Study via Study's left opening)
+  // doors (2 tiles)
   {
     const lib = HOTSPOTS.find(h=>h.id==='library')!.rect;
-    const sy = lib.y + Math.floor(lib.h/2) - 1; // center two tiles
-    for (let dy=0; dy<DOOR; dy++) g[ixy(lib.x+lib.w-1, sy+dy)] = 0; // break wall on library right
+    const y = lib.y + Math.floor(lib.h/2) - 1;
+    for (let d=0; d<DOOR; d++) g[ixy(lib.x+lib.w-1, y+d)] = 0; // library right
   }
-  // Study left (connects to Library), and bottom (to corridor)
   {
     const st = HOTSPOTS.find(h=>h.id==='study')!.rect;
-    const sy = st.y + Math.floor(st.h/2) - 1;
-    for (let dy=0; dy<DOOR; dy++) g[ixy(st.x, sy+dy)] = 0;               // left door
+    const y = st.y + Math.floor(st.h/2) - 1;
+    for (let d=0; d<DOOR; d++) g[ixy(st.x, y+d)] = 0;               // study left
     const bx = st.x + Math.floor(st.w/2) - 1;
-    for (let dx=0; dx<DOOR; dx++) g[ixy(bx+dx, st.y+st.h-1)] = 0;        // bottom door
+    for (let d=0; d<DOOR; d++) g[ixy(bx+d, st.y+st.h-1)] = 0;       // study bottom
   }
-  // Workshop left (to corridor)
   {
     const wk = HOTSPOTS.find(h=>h.id==='workshop')!.rect;
-    const sy = wk.y + Math.floor(wk.h/2) - 1;
-    for (let dy=0; dy<DOOR; dy++) g[ixy(wk.x, sy+dy)] = 0;
+    const y = wk.y + Math.floor(wk.h/2) - 1;
+    for (let d=0; d<DOOR; d++) g[ixy(wk.x, y+d)] = 0;               // workshop left
   }
-  // Lab right (to corridor)
   {
-    const lab = HOTSPOTS.find(h=>h.id==='lab')!.rect;
-    const sy = lab.y + Math.floor(lab.h/2) - 1;
-    for (let dy=0; dy<DOOR; dy++) g[ixy(lab.x+lab.w-1, sy+dy)] = 0;
+    const lb = HOTSPOTS.find(h=>h.id==='lab')!.rect;
+    const y = lb.y + Math.floor(lb.h/2) - 1;
+    for (let d=0; d<DOOR; d++) g[ixy(lb.x+lb.w-1, y+d)] = 0;        // lab right
   }
-  // Coffee left (to corridor)
   {
     const cf = HOTSPOTS.find(h=>h.id==='coffee')!.rect;
-    const sy = cf.y + Math.floor(cf.h/2) - 1;
-    for (let dy=0; dy<DOOR; dy++) g[ixy(cf.x, sy+dy)] = 0;
+    const y = cf.y + Math.floor(cf.h/2) - 1;
+    for (let d=0; d<DOOR; d++) g[ixy(cf.x, y+d)] = 0;               // coffee left
   }
-  // Garden top (centered 2 tiles)
   {
     const gd = HOTSPOTS.find(h=>h.id==='garden')!.rect;
     const cx = gd.x + Math.floor(gd.w/2) - 1;
-    for (let dx=0; dx<DOOR; dx++) g[ixy(cx+dx, gd.y)] = 0;
+    for (let d=0; d<DOOR; d++) g[ixy(cx+d, gd.y)] = 0;              // garden top
   }
 
   return g;
 })();
 
-/** ===== Procedural pixel sprites (Ivana + cats) ===== */
+/** ===== Procedural sprites ===== */
 function makeIvanaFrames() {
   const frames:HTMLCanvasElement[] = [];
   const drawOne = (dir:0|1|2|3, step:0|1|2) => {
@@ -129,12 +118,11 @@ function makeIvanaFrames() {
     c.width = 16; c.height = 16;
     const ctx = c.getContext('2d')!;
     const hair = '#2a1b1f';
-    const skin = '#b68b92'; // ~50% lighter than before
+    const skin = '#b68b92'; // lighter
     const blush='#c77a82', dress='#e59aa7', trim='#fff2f2', shoes='#2a1b1f';
     const leg = step===1? 1 : 0;
 
-    ctx.fillStyle = hair; ctx.fillRect(3,2,10,7);
-    ctx.fillRect(2,5,12,3);
+    ctx.fillStyle = hair; ctx.fillRect(3,2,10,7); ctx.fillRect(2,5,12,3);
     ctx.fillStyle = skin; ctx.fillRect(6,5,4,4);
     ctx.fillStyle = blush; ctx.fillRect(5,7,1,1); ctx.fillRect(10,7,1,1);
     ctx.fillStyle = '#1a1214'; ctx.fillRect(7,6,1,1); ctx.fillRect(9,6,1,1);
@@ -160,13 +148,12 @@ function drawIvana(ctx:CanvasRenderingContext2D, frames:HTMLCanvasElement[], x:n
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(frame, Math.round(x)-16, Math.round(y)-18, 32, 32);
 }
-
 function makeCat(color='#e7a264'){
   const c = document.createElement('canvas'); c.width=16; c.height=16;
   const ctx = c.getContext('2d')!;
   const fur = color, line='#6b4c30';
   ctx.fillStyle=fur; ctx.fillRect(3,7,10,6);
-  ctx.fillRect(4,5,3,2); ctx.fillRect(9,5,3,2); // ears
+  ctx.fillRect(4,5,3,2); ctx.fillRect(9,5,3,2);
   ctx.fillRect(1,9,2,3); ctx.fillRect(13,9,2,3);
   ctx.fillRect(2,12,12,1);
   ctx.fillStyle=line; ctx.fillRect(6,9,1,1); ctx.fillRect(9,9,1,1);
@@ -177,28 +164,28 @@ function drawCat(ctx:CanvasRenderingContext2D, img:HTMLCanvasElement, x:number,y
   ctx.drawImage(img, Math.round(x)-14, Math.round(y)-14, 28, 28);
 }
 
-/** ===== Main component ===== */
+/** ===== Component ===== */
 export default function World() {
   const canvasRef = useRef<HTMLCanvasElement|null>(null);
   const [openPanel, setOpenPanel] = useState<Panel|null>(null);
   const [openLine, setOpenLine] = useState<string|null>(null);
 
-  // player state
+  // player
   const [px, setPx] = useState(14*TILE);
   const [py, setPy] = useState(14*TILE);
   const [vx, setVx] = useState(0);
   const [vy, setVy] = useState(0);
   const [dir, setDir] = useState<0|1|2|3>(0);
-  const [t, setT] = useState(0); // animation clock
+  const [t, setT] = useState(0);
 
-  // lock body scroll while mounted
+  // lock scroll
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  // generate sprites once
+  // sprites once
   const ivanaFramesRef = useRef<HTMLCanvasElement[]|null>(null);
   const catsRef = useRef<{cookie:HTMLCanvasElement, belle:HTMLCanvasElement}|null>(null);
   useEffect(()=>{
@@ -206,15 +193,34 @@ export default function World() {
     catsRef.current = { cookie: makeCat('#e2a05a'), belle: makeCat('#e7b16a') };
   },[]);
 
-  // load tilesheet
-  const tileImgRef = useRef<HTMLImageElement|null>(null);
-  useEffect(()=>{
-    const img = new Image();
-    img.src = '/tiles.png';
-    img.onload = () => { tileImgRef.current = img; };
-  },[]);
+  // ===== Preload images (tiles + props) =====
+  const tilesRef = useRef<HTMLImageElement|null>(null);
+  const propsRef = useRef<Record<string, HTMLImageElement>>({});
 
-  // controls (prevent page scroll on arrows/space)
+  useEffect(() => {
+    const load = (src:string) => new Promise<HTMLImageElement>(res=>{
+      const i = new Image(); i.src = src; i.onload = () => res(i);
+    });
+
+    (async () => {
+      // tiles
+      tilesRef.current = await load('/tiles.png');
+
+      // props
+      const names = [
+        'bookshelf1_32x48.png','bookshelf2_32x48.png','plant_16x36.png',
+        'desk_48x40.png','chair_16x24.png','coffee_machine_16x22.png',
+        'laptop_16x16.png','sofa_48x32.png','lamp_16x44.png',
+        'coffee_table_32x20.png','bed_32x44.png','fountain_64x64.png'
+      ];
+      const imgs = await Promise.all(names.map(n => load('/'+n)));
+      const dict: Record<string, HTMLImageElement> = {};
+      names.forEach((n,i)=>{ dict[n] = imgs[i]; });
+      propsRef.current = dict;
+    })();
+  }, []);
+
+  // controls
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
@@ -238,53 +244,55 @@ export default function World() {
   }, [vx,vy,openPanel,openLine]);
 
   const interact = () => {
-    // cat talk?
+    // talk to cat?
     for(const c of CATS){
       if (Math.hypot(px - c.x, py - c.y) < 28){
         setOpenLine(`${c.line} — ${c.name}`);
         return;
       }
     }
-    // room panel?
+    // open room?
     const tx = Math.floor(px/TILE), ty = Math.floor(py/TILE);
     const hit = HOTSPOTS.find(h => aabb(tx,ty,1,1, h.rect.x,h.rect.y,h.rect.w,h.rect.h));
     if (hit) setOpenPanel(getPanel(hit.id) || null);
   };
 
-  // helper to draw a tile from tiles.png
+  // draw helper for tilesheet
   const drawTile = (
     ctx:CanvasRenderingContext2D,
-    tileIndex:number,
-    dx:number, dy:number, scale=2
+    idx:number, dx:number, dy:number, scale=2
   )=>{
-    const img = tileImgRef.current;
+    const img = tilesRef.current;
     if (!img) return;
-    const sx = (tileIndex % 7) * SRC_TILE;
-    const sy = Math.floor(tileIndex / 7) * SRC_TILE;
+    const sx = (idx % 7) * SRC_TILE;
+    const sy = Math.floor(idx / 7) * SRC_TILE;
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(img, sx, sy, SRC_TILE, SRC_TILE, dx, dy, SRC_TILE*scale, SRC_TILE*scale);
   };
 
-  // movement + drawing
+  // main loop
   useEffect(() => {
     let raf = 0;
     const step = () => {
       setT(v => (v+1)%9999);
 
-      let nx = px + vx*SPEED;
-      let ny = py + vy*SPEED;
-
+      // movement with wall checks
       const col = (xx:number, yy:number) => {
         const gx = Math.floor(xx/TILE), gy = Math.floor(yy/TILE);
         if (gx<0||gy<0||gx>=COLS||gy>=ROWS) return true;
         return MAP[ ixy(gx,gy) ] === 1;
       };
       const half = TILE*0.35;
+
+      let nx = px + vx*SPEED;
+      let ny = py + vy*SPEED;
+
       const canX = !(
         col(nx-half, py-half) || col(nx+half, py-half) ||
         col(nx-half, py+half) || col(nx+half, py+half)
       );
       if (canX) setPx(nx);
+
       const canY = !(
         col(px-half, ny-half) || col(px+half, ny-half) ||
         col(px-half, ny+half) || col(px+half, ny+half)
@@ -302,7 +310,7 @@ export default function World() {
       c.width = COLS*TILE; c.height = ROWS*TILE;
       ctx.imageSmoothingEnabled = false;
 
-      // base corridor background (light parquet checker)
+      // corridor base
       ctx.fillStyle = '#fff7f6'; ctx.fillRect(0,0,c.width,c.height);
       for(let y=0;y<ROWS;y++){
         for(let x=0;x<COLS;x++){
@@ -313,11 +321,10 @@ export default function World() {
         }
       }
 
-      // room interiors: soft cream so they contrast with corridor
+      // room interiors (soft cream)
       ctx.fillStyle = '#fdf5f3';
       HOTSPOTS.forEach(h=>{
         const r = h.rect;
-        // fill interior (minus 1px to avoid covering walls later)
         ctx.fillRect(r.x*TILE+1, r.y*TILE+1, r.w*TILE-2, r.h*TILE-2);
       });
 
@@ -338,7 +345,7 @@ export default function World() {
         }
       }
 
-      // room labels
+      // labels
       ctx.font = '12px "Courier Prime", monospace';
       HOTSPOTS.forEach(h=>{
         ctx.fillStyle = '#7d5e65';
@@ -351,58 +358,40 @@ export default function World() {
       drawCat(ctx, catsRef.current.cookie, CATS[0].x, CATS[0].y);
       drawCat(ctx, catsRef.current.belle,  CATS[1].x, CATS[1].y);
 
-      // simple props layout (non-blocking visuals)
-      // Library props
-      {
-        const lib = HOTSPOTS.find(h=>h.id==='library')!.rect;
-        const bs1 = new Image(); bs1.src = '/bookshelf1_32x48.png';
-        const bs2 = new Image(); bs2.src = '/bookshelf2_32x48.png';
-        const plant = new Image(); plant.src = '/plant_16x36.png';
-        bs1.onload = ()=>ctx.drawImage(bs1, (lib.x+1)*TILE, (lib.y+1)*TILE-16);
-        bs2.onload = ()=>ctx.drawImage(bs2, (lib.x+3)*TILE, (lib.y+1)*TILE-16);
-        plant.onload = ()=>ctx.drawImage(plant, (lib.x+lib.w-2)*TILE, (lib.y+lib.h-2)*TILE-4);
-      }
-      // Coffee room props
-      {
-        const cf = HOTSPOTS.find(h=>h.id==='coffee')!.rect;
-        const desk = new Image(); desk.src = '/desk_48x40.png';
-        const chair = new Image(); chair.src = '/chair_16x24.png';
-        const cm = new Image(); cm.src = '/coffee_machine_16x22.png';
-        const laptop = new Image(); laptop.src = '/laptop_16x16.png';
-        desk.onload = ()=>ctx.drawImage(desk, (cf.x+2)*TILE, (cf.y+2)*TILE-8);
-        chair.onload = ()=>ctx.drawImage(chair, (cf.x+3)*TILE, (cf.y+3)*TILE+6);
-        cm.onload = ()=>ctx.drawImage(cm, (cf.x+2)*TILE+6, (cf.y+2)*TILE-6);
-        laptop.onload = ()=>ctx.drawImage(laptop, (cf.x+3)*TILE+12, (cf.y+2)*TILE+6);
-      }
-      // Study props
-      {
-        const st = HOTSPOTS.find(h=>h.id==='study')!.rect;
-        const sofa = new Image(); sofa.src = '/sofa_48x32.png';
-        const lamp = new Image(); lamp.src = '/lamp_16x44.png';
-        const tbl = new Image(); tbl.src = '/coffee_table_32x20.png';
-        sofa.onload = ()=>ctx.drawImage(sofa, (st.x+Math.floor(st.w/2)-1)*TILE, (st.y+Math.floor(st.h/2))*TILE);
-        lamp.onload = ()=>ctx.drawImage(lamp, (st.x+st.w-2)*TILE+8, (st.y+Math.floor(st.h/2))*TILE-12);
-        tbl.onload = ()=>ctx.drawImage(tbl, (st.x+Math.floor(st.w/2))*TILE, (st.y+Math.floor(st.h/2)+1)*TILE);
-      }
-      // Lab prop (bed) just for fun
-      {
-        const lb = HOTSPOTS.find(h=>h.id==='lab')!.rect;
-        const bed = new Image(); bed.src = '/bed_32x44.png';
-        bed.onload = ()=>ctx.drawImage(bed, (lb.x+lb.w-3)*TILE, (lb.y+lb.h-3)*TILE-12);
-      }
-      // Garden fountain (aligned left)
-      {
-        const gd = HOTSPOTS.find(h=>h.id==='garden')!.rect;
-        const f = new Image(); f.src = '/fountain_64x64.png';
-        const fx = (gd.x+1)*TILE; // left aligned
-        const fy = (gd.y + Math.floor(gd.h/2))*TILE - 16;
-        f.onload = ()=>ctx.drawImage(f, fx, fy, 64,64);
-      }
+      // ===== props (draw every frame if loaded) =====
+      const P = propsRef.current;
 
-      // character
+      // Library
+      const lib = HOTSPOTS.find(h=>h.id==='library')!.rect;
+      if (P['bookshelf1_32x48.png']) ctx.drawImage(P['bookshelf1_32x48.png'], (lib.x+1)*TILE, (lib.y+1)*TILE-16);
+      if (P['bookshelf2_32x48.png']) ctx.drawImage(P['bookshelf2_32x48.png'], (lib.x+3)*TILE, (lib.y+1)*TILE-16);
+      if (P['plant_16x36.png'])      ctx.drawImage(P['plant_16x36.png'],      (lib.x+lib.w-2)*TILE, (lib.y+lib.h-2)*TILE-4);
+
+      // Coffee room
+      const cf = HOTSPOTS.find(h=>h.id==='coffee')!.rect;
+      if (P['desk_48x40.png'])            ctx.drawImage(P['desk_48x40.png'],            (cf.x+2)*TILE, (cf.y+2)*TILE-8);
+      if (P['chair_16x24.png'])           ctx.drawImage(P['chair_16x24.png'],           (cf.x+3)*TILE, (cf.y+3)*TILE+6);
+      if (P['coffee_machine_16x22.png'])  ctx.drawImage(P['coffee_machine_16x22.png'],  (cf.x+2)*TILE+6, (cf.y+2)*TILE-6);
+      if (P['laptop_16x16.png'])          ctx.drawImage(P['laptop_16x16.png'],          (cf.x+3)*TILE+12, (cf.y+2)*TILE+6);
+
+      // Study
+      const st = HOTSPOTS.find(h=>h.id==='study')!.rect;
+      if (P['sofa_48x32.png'])            ctx.drawImage(P['sofa_48x32.png'],            (st.x+Math.floor(st.w/2)-1)*TILE, (st.y+Math.floor(st.h/2))*TILE);
+      if (P['lamp_16x44.png'])            ctx.drawImage(P['lamp_16x44.png'],            (st.x+st.w-2)*TILE+8, (st.y+Math.floor(st.h/2))*TILE-12);
+      if (P['coffee_table_32x20.png'])    ctx.drawImage(P['coffee_table_32x20.png'],    (st.x+Math.floor(st.w/2))*TILE, (st.y+Math.floor(st.h/2)+1)*TILE);
+
+      // Lab
+      const lb = HOTSPOTS.find(h=>h.id==='lab')!.rect;
+      if (P['bed_32x44.png'])             ctx.drawImage(P['bed_32x44.png'],             (lb.x+lb.w-3)*TILE, (lb.y+lb.h-3)*TILE-12);
+
+      // Garden (fountain aligned left)
+      const gd = HOTSPOTS.find(h=>h.id==='garden')!.rect;
+      if (P['fountain_64x64.png'])        ctx.drawImage(P['fountain_64x64.png'],        (gd.x+1)*TILE, (gd.y + Math.floor(gd.h/2))*TILE - 16, 64, 64);
+
+      // Ivana
       drawIvana(ctx, ivanaFramesRef.current, px, py, dir, t);
 
-      // interaction hint
+      // hint
       const nearCat = CATS.some(c => Math.hypot(px - c.x, py - c.y) < 30);
       const tx = Math.floor(px/TILE), ty = Math.floor(py/TILE);
       const onRoom = HOTSPOTS.find(h => aabb(tx,ty,1,1, h.rect.x,h.rect.y,h.rect.w,h.rect.h));
@@ -416,6 +405,7 @@ export default function World() {
 
     step();
     return () => cancelAnimationFrame(raf);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [px,py,vx,vy]);
 
   return (
@@ -430,20 +420,13 @@ export default function World() {
         <canvas ref={canvasRef}
                 className="block mx-auto"
                 style={{ imageRendering:'pixelated' }} />
-        {/* Mobile button */}
         <div className="absolute right-2 bottom-2">
           <button onClick={()=>interact()} className="btn">Interact (E)</button>
         </div>
       </div>
 
-      {/* Room modal */}
       {openPanel && <PanelModal panel={openPanel} onClose={()=>setOpenPanel(null)} />}
-      {/* Cat bubble */}
-      {openLine && (
-        <Bubble onClose={()=>setOpenLine(null)}>
-          {openLine}
-        </Bubble>
-      )}
+      {openLine && <Bubble onClose={()=>setOpenLine(null)}>{openLine}</Bubble>}
 
       <div className="mt-6">
         <a href="/" className="underline text-muted">← Back home</a>
@@ -486,7 +469,6 @@ function PanelModal({panel,onClose}:{panel:Panel,onClose:()=>void}){
     </div>
   );
 }
-
 function Bubble({children,onClose}:{children:React.ReactNode; onClose:()=>void}){
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4">
