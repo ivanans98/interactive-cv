@@ -5,26 +5,32 @@ export type Panel = {
   bullets: string[];
   chips?: string[];
   ctas?: { label: string; href: string; external?: boolean }[];
+  /** Optional image shown on the right side of the panel */
+  imageUrl?: string;
+  imageAlt?: string;
 };
 
 export const PANELS: Panel[] = [
   {
     id: "foyer",
-    title: "Foyer — About",
+    title: "Hi, I’m Ivana!",
     bullets: [
-      "Hi, I’m Ivana — a Mechatronics Engineer building intelligent software. I merge mechanical systems thinking with clean code to create reliable, human-friendly tech.",
-      "My passion is turning complex problems—from messy production data to abstract app ideas—into elegant, functional solutions."
+      "A Mechatronics Engineer building intelligent software who loves turning complex problems into elegant, functional solutions.",
+      "Make yourself at home, explore the rooms, and keep an eye out for my two fluffy sidekicks. 🐾"
     ],
     ctas: [{ label: "Classic CV", href: "/cv" }],
-    chips: ["Cozy", "Pixel-cute"]
+
+    imageUrl: "/ivana.jpg",
+    imageAlt: "Ivana smiling"
   },
   {
     id: "lab",
-    title: "Lab — Bookshelf (Android App, ETA 2026)",
+    title: "This is my Creative Lab",
     bullets: [
-      "A beautiful reading tracker that feels like your personal bookshelf.",
-      "Built with Kotlin; offline-first with Room; thoughtful UX for bookworms.",
-      "Currently polishing the final details for a public launch."
+    "This is where I share work-in-progress experiments and what I’m currently building.",
+    "Right now I’m developing Bukshelf — an aesthetic, calm reading tracker that feels like your own library.",
+    "Built with Android Studio using Java + Kotlin; as personalizable as it gets and thoughtfully minimal.",
+    "It’s still in the works (I’m giving it my all!) and I’m aiming for a first public release by the end of 2026. I’ll keep the mockups updated as I go."
     ],
     ctas: [{ label: "Mockups", href: "#" }],
     chips: ["Android", "Kotlin", "Room"]
@@ -77,16 +83,6 @@ export const PANELS: Panel[] = [
     ]
   },
   {
-    id: "ai-den",
-    title: "AI Den — My POV",
-    bullets: [
-      "AI is the future; prompt engineering is core literacy.",
-      "I focus on safe, explainable, non-hallucinating workflows.",
-      "The job: teach AI and design guardrails."
-    ],
-    chips: ["Prompting", "Safety", "UX of AI"]
-  },
-  {
     id: "library",
     title: "Library — Skills",
     bullets: [
@@ -115,7 +111,7 @@ export const PANELS: Panel[] = [
     ],
     ctas: [
       { label: "Email", href: "mailto:inavarretesanteliz@gmail.com" },
-      { label: "LinkedIn", href: "www.linkedin.com/in/ivana-navarrete-santeliz", external: true },
+      { label: "LinkedIn", href: "https://www.linkedin.com/in/ivana-navarrete-santeliz", external: true },
       { label: "GitHub", href: "https://github.com/ivanas98", external: true },
       { label: "Classic CV", href: "/cv" }
     ],
