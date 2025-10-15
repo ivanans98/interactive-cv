@@ -233,9 +233,12 @@ export default function World() {
   const [openPanel, setOpenPanel] = useState<Panel | null>(null);
   const [openLine, setOpenLine] = useState<string | null>(null);
 
-  // player
-  const [px, setPx] = useState(14 * TILE);
-  const [py, setPy] = useState(14 * TILE);
+  // player — start in the center of the foyer
+  const foyerCenterX = (FOYER.x + FOYER.w / 2) * TILE;
+  const foyerCenterY = (FOYER.y + FOYER.h / 2) * TILE;
+  
+  const [px, setPx] = useState(foyerCenterX);
+  const [py, setPy] = useState(foyerCenterY);
   const [vx, setVx] = useState(0);
   const [vy, setVy] = useState(0);
   const [dir, setDir] = useState<0 | 1 | 2 | 3>(0);
@@ -460,10 +463,16 @@ export default function World() {
       ctx.font = '12px "Courier Prime", monospace';
       HOTSPOTS.forEach(h => {
         ctx.fillStyle = '#7d5e65';
-        ctx.fillText(h.label, h.rect.x * TILE + 3, h.rect.y * TILE - 4);
+        if (h.id === 'garden') {
+          const yMid = h.rect.y * TILE + Math.floor(h.rect.h * TILE / 2) + 4;
+          ctx.fillText(h.label, (h.rect.x - 2) * TILE, yMid);
+        } else {
+          ctx.fillText(h.label, h.rect.x * TILE + 3, h.rect.y * TILE - 4);
+        }
       });
       ctx.fillStyle = '#7d5e65';
       ctx.fillText('Foyer', FOYER.x * TILE + 3, FOYER.y * TILE - 4);
+
 
       // cats
       drawCat(ctx, catsRef.current.cookie, CATS[0].x, CATS[0].y);
