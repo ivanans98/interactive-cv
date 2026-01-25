@@ -9,39 +9,24 @@ const COLS = 30;
 const ROWS = 20;
 const SPEED = 2.0;
 const DOOR = 2;
-
 const SRC_TILE = 16;
 
-/** (reference only) */
+/** Reference */
 const TILE_IDX = {
-  stone_path: 0,
-  rug1: 1,
-  parquet: 2,
-  rug2: 3,
-  grass: 4,
-  flowers: 5,
-  wall_L: 6,
-  wall_TL: 7,
-  wall_TR: 8,
-  wall_BL: 9,
-  wall_BR: 10,
-  wall_T: 11,
-  wall_B: 12,
-  wall_R: 13,
+  stone_path: 0, rug1: 1, parquet: 2, rug2: 3, grass: 4, flowers: 5,
+  wall_L: 6, wall_TL: 7, wall_TR: 8, wall_BL: 9, wall_BR: 10,
+  wall_T: 11, wall_B: 12, wall_R: 13,
 };
 
 /** grid coordinates within tiles.png (col,row) */
 const TILESET = {
-  parquet: [2, 0],
-  rug1: [1, 0],
-  grass: [4, 0],
-  flowers: [5, 0],
-  stone: [0, 0],
+  parquet: [2, 0], rug1: [1, 0], grass: [4, 0],
+  flowers: [5, 0], stone: [0, 0],
 };
 
 type Rect = { x: number; y: number; w: number; h: number };
 
-/** Room interior rectangles (get parquet) */
+/** Room interior rectangles */
 const ROOMS: Rect[] = [
   { x: 3, y: 2, w: 8, h: 7 },   // Library
   { x: 12, y: 2, w: 10, h: 7 }, // Study
@@ -50,7 +35,7 @@ const ROOMS: Rect[] = [
   { x: 19, y: 12, w: 9,  h: 6 },// Coffee
 ];
 
-/** Foyer area (rug lives here) */
+/** Foyer area */
 const FOYER: Rect = { x: 15, y: 14, w: 3, h: 3 };
 
 /** Explicit foyer rug cells so it never touches door tiles */
@@ -118,7 +103,6 @@ const MAP: number[] = (() => {
   }
   {
     const wk = HOTSPOTS.find(h => h.id === 'workshop')!.rect;
-    // door at bottom (easier to access)
     const bx = wk.x + Math.floor(wk.w / 2) - 1;
     for (let d = 0; d < DOOR; d++) g[ixy(bx + d, wk.y + wk.h - 1)] = 0;     // workshop bottom
   }
@@ -133,11 +117,10 @@ const MAP: number[] = (() => {
     for (let d = 0; d < DOOR; d++) g[ixy(cf.x, y + d)] = 0;                 // coffee left
   }
   {
-    // Garden door aligned with the vertical stone path that leaves the FOYER
     const gardenRect = HOTSPOTS.find(h => h.id === 'garden')!.rect;
     const pathX = FOYER.x + Math.floor(FOYER.w / 2);
     const cx = pathX - Math.floor(DOOR / 2);
-    for (let d = 0; d < DOOR; d++) g[ixy(cx + d, gardenRect.y)] = 0;        // garden top (aligned)
+    for (let d = 0; d < DOOR; d++) g[ixy(cx + d, gardenRect.y)] = 0;        // garden top
   }
 
   return g;
@@ -211,7 +194,6 @@ const drawSheetTile = (
   ctx.drawImage(img, sheetCol * s, sheetRow * s, s, s, gridX * TILE, gridY * TILE, TILE, TILE);
 };
 
-/** Draw a prop anchored to the floor of a tile (so scaling keeps it on the ground) */
 function drawProp(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
@@ -232,8 +214,8 @@ export default function World() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [openPanel, setOpenPanel] = useState<Panel | null>(null);
   const [openLine, setOpenLine] = useState<string | null>(null);
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
 
-  // player — start in the center of the foyer
   const foyerCenterX = (FOYER.x + FOYER.w / 2) * TILE;
   const foyerCenterY = (FOYER.y + FOYER.h / 2) * TILE;
   
@@ -251,15 +233,15 @@ export default function World() {
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  // sprites once
   const ivanaFramesRef = useRef<HTMLCanvasElement[] | null>(null);
   const catsRef = useRef<{ cookie: HTMLCanvasElement, belle: HTMLCanvasElement } | null>(null);
+  
   useEffect(() => {
     ivanaFramesRef.current = makeIvanaFrames();
     catsRef.current = { cookie: makeCat('#e2a05a'), belle: makeCat('#e7b16a') };
   }, []);
 
-  // ===== Preload images (tiles + props) =====
+  // ===== Preload images =====
   tilesRef = useRef<HTMLImageElement | null>(null);
   const propsRef = useRef<Record<string, HTMLImageElement>>({});
 
@@ -269,10 +251,7 @@ export default function World() {
     });
 
     (async () => {
-      // tiles
       tilesRef.current = await load('/tiles.png');
-
-      // props — keep names as in /public/props
       const names = [
         'bookshelf1_32x48.png','bookshelf2_32x48.png','plant_16x36.png',
         'desk_48x40.png','chair_16x24.png','coffee_machine_16x22.png',
@@ -283,15 +262,16 @@ export default function World() {
         'coat_rack_16x40.png','shoe_rack_32x32.png','umbrella_stand_16x32.png',
         'tree_small_32x32.png','bench_48x48.png'
       ];
-
       const imgs = await Promise.all(names.map(n => load(PROP_PATH + n)));
       const dict: Record<string, HTMLImageElement> = {};
       names.forEach((n, i) => { dict[n] = imgs[i]; });
       propsRef.current = dict;
+      
+      setAssetsLoaded(true);
     })();
   }, []);
 
-  // controls (Space = trigger; Space also closes)
+  // controls
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
@@ -323,22 +303,17 @@ export default function World() {
   }, [vx, vy, openPanel, openLine]);
 
   const interact = () => {
-    // talk to cat?
     for (const c of CATS) {
       if (Math.hypot(px - c.x, py - c.y) < 28) {
         setOpenLine(`${c.line} — ${c.name}`);
         return;
       }
     }
-    // open room?
     const tx = Math.floor(px / TILE), ty = Math.floor(py / TILE);
-
-    // foyer trigger (not in HOTSPOTS)
     if (aabb(tx, ty, 1, 1, FOYER.x, FOYER.y, FOYER.w, FOYER.h)) {
       setOpenPanel(getPanel('foyer') || null);
       return;
     }
-
     const hit = HOTSPOTS.find(h => aabb(tx, ty, 1, 1, h.rect.x, h.rect.y, h.rect.w, h.rect.h));
     if (hit) setOpenPanel(getPanel(hit.id) || null);
   };
@@ -354,6 +329,8 @@ export default function World() {
 
   // main loop
   useEffect(() => {
+    if (!assetsLoaded) return;
+
     let raf = 0;
     const step = () => {
       setT(v => (v + 1) % 9999);
@@ -392,7 +369,7 @@ export default function World() {
       c.width = COLS * TILE; c.height = ROWS * TILE;
       ctx.imageSmoothingEnabled = false;
 
-      // corridor checker base
+      // Draw Base
       ctx.fillStyle = '#fff7f6'; ctx.fillRect(0, 0, c.width, c.height);
       for (let y = 0; y < ROWS; y++) {
         for (let x = 0; x < COLS; x++) {
@@ -403,23 +380,19 @@ export default function World() {
         }
       }
 
-      // room interiors (soft cream)
+      // Draw Rooms
       ctx.fillStyle = '#fdf5f3';
       HOTSPOTS.forEach(h => {
         const r = h.rect;
         ctx.fillRect(r.x * TILE + 1, r.y * TILE + 1, r.w * TILE - 2, r.h * TILE - 2);
       });
-
-      // parquet in rooms
       ROOMS.forEach(r => drawRectOf(ctx, 'parquet', r));
-
-      // foyer rug
       for (const [gx, gy] of FOYER_RUG) {
         const [sx, sy] = TILESET.rug1;
         drawSheetTile(ctx, sx, sy, gx, gy);
       }
 
-      // walls
+      // Draw Walls
       for (let y = 0; y < ROWS; y++) {
         for (let x = 0; x < COLS; x++) {
           if (MAP[ixy(x, y)] === 1) {
@@ -429,37 +402,30 @@ export default function World() {
         }
       }
 
-      // Garden ground + path + vertical connector
-      {
-        const gd = HOTSPOTS.find(h => h.id === 'garden')!.rect;
-
-        for (let yy = gd.y; yy < gd.y + gd.h; yy++) {
-          for (let xx = gd.x; xx < gd.x + gd.w; xx++) {
-            const [gx, gy] = TILESET.grass;
-            drawSheetTile(ctx, gx, gy, xx, yy);
-            if ((xx + yy) % 5 === 0) {
-              const [fx, fy] = TILESET.flowers;
-              drawSheetTile(ctx, fx, fy, xx, yy);
-            }
+      // Draw Garden
+      const gd = HOTSPOTS.find(h => h.id === 'garden')!.rect;
+      for (let yy = gd.y; yy < gd.y + gd.h; yy++) {
+        for (let xx = gd.x; xx < gd.x + gd.w; xx++) {
+          const [gx, gy] = TILESET.grass;
+          drawSheetTile(ctx, gx, gy, xx, yy);
+          if ((xx + yy) % 5 === 0) {
+            const [fx, fy] = TILESET.flowers;
+            drawSheetTile(ctx, fx, fy, xx, yy);
           }
         }
-
-        // garden horizontal path band
-        const mid = gd.y + Math.floor(gd.h / 2);
-        for (let xx = gd.x; xx < gd.x + gd.w; xx++) {
-          const [sx, sy] = TILESET.stone;
-          drawSheetTile(ctx, sx, sy, xx, mid);
-        }
-
-        // vertical connector aligned with foyer center
+      }
+      const mid = gd.y + Math.floor(gd.h / 2);
+      for (let xx = gd.x; xx < gd.x + gd.w; xx++) {
         const [sx, sy] = TILESET.stone;
-        const pathX = FOYER.x + Math.floor(FOYER.w / 2);
-        for (let y = gd.y; y <= FOYER.y + FOYER.h; y++) {
-          drawSheetTile(ctx, sx, sy, pathX, y);
-        }
+        drawSheetTile(ctx, sx, sy, xx, mid);
+      }
+      const [sx, sy] = TILESET.stone;
+      const pathX = FOYER.x + Math.floor(FOYER.w / 2);
+      for (let y = gd.y; y <= FOYER.y + FOYER.h; y++) {
+        drawSheetTile(ctx, sx, sy, pathX, y);
       }
 
-      // labels
+      // Draw Labels
       ctx.font = '12px "Courier Prime", monospace';
       HOTSPOTS.forEach(h => {
         ctx.fillStyle = '#7d5e65';
@@ -473,15 +439,12 @@ export default function World() {
       ctx.fillStyle = '#7d5e65';
       ctx.fillText('Foyer', FOYER.x * TILE + 3, FOYER.y * TILE - 4);
 
-
-      // cats
-      drawCat(ctx, catsRef.current.cookie, CATS[0].x, CATS[0].y);
-      drawCat(ctx, catsRef.current.belle, CATS[1].x, CATS[1].y);
-
-      // ===== props =====
+      // Draw Cats & Props
+      drawCat(ctx, catsRef.current!.cookie, CATS[0].x, CATS[0].y);
+      drawCat(ctx, catsRef.current!.belle, CATS[1].x, CATS[1].y);
       const P = propsRef.current;
-
-      // Foyer
+      
+      // Props logic
       if (P['coat_rack_16x40.png'])      drawProp(ctx, P['coat_rack_16x40.png'],      FOYER.x + FOYER.w - 1, FOYER.y,                 { scale: 1.25 });
       if (P['umbrella_stand_16x32.png']) drawProp(ctx, P['umbrella_stand_16x32.png'], FOYER.x + 1,           FOYER.y,   { scale: 1.25 });
 
@@ -497,7 +460,7 @@ export default function World() {
         if (P['plant_16x36.png'])       drawProp(ctx, P['plant_16x36.png'],       r.x + r.w - 2, r.y + r.h - 2, { oy: -2 });
       }
 
-      // Study (bigger desk & chair; laptop on desk)
+      // Study
       {
         const r = HOTSPOTS.find(h => h.id === 'study')!.rect;
         if (P['desk_48x40.png'])            drawProp(ctx, P['desk_48x40.png'],            r.x + 2, r.y + 2, { scale: 1.25 });
@@ -515,7 +478,7 @@ export default function World() {
         if (P['lamp_16x44.png'])         drawProp(ctx, P['lamp_16x44.png'],         r.x + r.w - 2, r.y + Math.floor(r.h / 2), { ox: 8, oy: -8 });
       }
 
-      // Workshop — moved a bit down (toward middle vertically)
+      // Workshop
       {
         const r = HOTSPOTS.find(h => h.id === 'workshop')!.rect;
         const cx = r.x + Math.floor(r.w / 2) - 1;
@@ -526,7 +489,7 @@ export default function World() {
         if (P['plant_counter_16x16.png']) drawProp(ctx, P['plant_counter_16x16.png'], r.x + 1, r.y + r.h - 2);
       }
 
-      // Lab — added shoe rack; kept plants; bigger bed already
+      // Lab
       {
         const r = HOTSPOTS.find(h => h.id === 'lab')!.rect;
         if (P['bed_32x44.png'])           drawProp(ctx, P['bed_32x44.png'],           r.x + r.w - 3, r.y + r.h - 3, { scale: 1.25 });
@@ -536,22 +499,11 @@ export default function World() {
         if (P['shoe_rack_32x32.png'])     drawProp(ctx, P['shoe_rack_32x32.png'],     r.x + 1, r.y + r.h - 2, { scale: 1.25 });
       }
 
-      // Garden
-      {
-        const r = HOTSPOTS.find(h => h.id === 'garden')!.rect;
-        if (P['fountain_64x64.png'])   drawProp(ctx, P['fountain_64x64.png'],   r.x + 1, r.y + Math.floor(r.h / 2), { oy: -16 });
-        if (P['tree_small_32x32.png']) drawProp(ctx, P['tree_small_32x32.png'], r.x + r.w - 3, r.y, { scale: 1.2, oy: -12 });
-        if (P['bench_48x48.png'])      drawProp(ctx, P['bench_48x48.png'],      r.x + r.w - 6, r.y + Math.floor(r.h / 2));
-      }
-
-      // Ivana
+      // Ivana & Hint
       drawIvana(ctx, ivanaFramesRef.current!, px, py, dir, t);
-
-      // hint (Space)
       const nearCat = CATS.some(c => Math.hypot(px - c.x, py - c.y) < 30);
       const tx = Math.floor(px / TILE), ty = Math.floor(py / TILE);
-      const onRoom =
-        HOTSPOTS.find(h => aabb(tx, ty, 1, 1, h.rect.x, h.rect.y, h.rect.w, h.rect.h)) ||
+      const onRoom = HOTSPOTS.find(h => aabb(tx, ty, 1, 1, h.rect.x, h.rect.y, h.rect.w, h.rect.h)) ||
         aabb(tx, ty, 1, 1, FOYER.x, FOYER.y, FOYER.w, FOYER.h);
       if (nearCat || onRoom) {
         ctx.fillStyle = 'rgba(0,0,0,.08)';
@@ -563,19 +515,98 @@ export default function World() {
 
     step();
     return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [px, py, vx, vy]);
+  }, [px, py, vx, vy, assetsLoaded]);
 
   return (
     <div className="px-4 py-6">
       <h1 className="text-2xl font-semibold mb-2">The Cozy House</h1>
-      <p className="text-muted mb-3">
+      <p className="text-muted mb-3 hidden sm:block">
         Move with WASD/Arrow keys. Stand on a room or near a cat and press <b>Space</b>.
       </p>
+      <p className="text-muted mb-3 sm:hidden">
+        Use the on-screen buttons to move and Interact.
+      </p>
 
-      <div className="relative overflow-auto border rounded-xl max-w-full" style={{ borderColor: 'var(--border)' }}>
-        <canvas ref={canvasRef} className="block mx-auto" style={{ imageRendering: 'pixelated' }} />
-        <div className="absolute right-2 bottom-2">
+      {/* Loading Indicator */}
+      {!assetsLoaded && (
+        <div className="text-center p-10 bg-gray-50 border rounded-xl">
+          <p>Loading assets...</p>
+        </div>
+      )}
+
+      {/* Mobile Optimized Container */}
+      <div 
+        className={`relative overflow-auto border rounded-xl max-w-full ${!assetsLoaded ? 'hidden' : 'block'}`} 
+        style={{ borderColor: 'var(--border)' }}
+      >
+        <canvas 
+          ref={canvasRef} 
+          className="block mx-auto max-w-full h-auto" 
+          style={{ imageRendering: 'pixelated', touchAction: 'none' }} 
+        />
+        
+        {/* === START NEW: Mobile D-Pad === */}
+        <div className="sm:hidden absolute bottom-4 right-4 flex flex-col items-center gap-2 select-none"
+             style={{ touchAction: 'none' }}>
+          
+          {/* Interact Button (Top-Right) */}
+          <button 
+            className="absolute -top-16 -right-2 btn bg-white/90 shadow-md active:bg-gray-100"
+            onClick={() => interact()}
+            onTouchEnd={(e) => { e.preventDefault(); interact(); }}
+          >
+            Interact
+          </button>
+
+          {/* Up */}
+          <button 
+            className="w-12 h-12 bg-white/80 rounded-full shadow-lg active:bg-gray-200 flex items-center justify-center text-xl font-bold"
+            onTouchStart={(e) => { e.preventDefault(); setVy(-1); setDir(3); }}
+            onTouchEnd={(e) => { e.preventDefault(); setVy(0); }}
+            onMouseDown={() => { setVy(-1); setDir(3); }} 
+            onMouseUp={() => setVy(0)}
+          >
+            ↑
+          </button>
+
+          <div className="flex gap-2">
+            {/* Left */}
+            <button 
+              className="w-12 h-12 bg-white/80 rounded-full shadow-lg active:bg-gray-200 flex items-center justify-center text-xl font-bold"
+              onTouchStart={(e) => { e.preventDefault(); setVx(-1); setDir(1); }}
+              onTouchEnd={(e) => { e.preventDefault(); setVx(0); }}
+              onMouseDown={() => { setVx(-1); setDir(1); }} 
+              onMouseUp={() => setVx(0)}
+            >
+              ←
+            </button>
+            
+            {/* Down */}
+            <button 
+              className="w-12 h-12 bg-white/80 rounded-full shadow-lg active:bg-gray-200 flex items-center justify-center text-xl font-bold"
+              onTouchStart={(e) => { e.preventDefault(); setVy(1); setDir(0); }}
+              onTouchEnd={(e) => { e.preventDefault(); setVy(0); }}
+              onMouseDown={() => { setVy(1); setDir(0); }} 
+              onMouseUp={() => setVy(0)}
+            >
+              ↓
+            </button>
+
+            {/* Right */}
+            <button 
+              className="w-12 h-12 bg-white/80 rounded-full shadow-lg active:bg-gray-200 flex items-center justify-center text-xl font-bold"
+              onTouchStart={(e) => { e.preventDefault(); setVx(1); setDir(2); }}
+              onTouchEnd={(e) => { e.preventDefault(); setVx(0); }}
+              onMouseDown={() => { setVx(1); setDir(2); }} 
+              onMouseUp={() => setVx(0)}
+            >
+              →
+            </button>
+          </div>
+        </div>
+        {/* === END NEW: Mobile D-Pad === */}
+
+        <div className="absolute right-2 bottom-2 hidden sm:block">
           <button onClick={() => interact()} className="btn">Interact (Space)</button>
         </div>
       </div>
@@ -623,7 +654,6 @@ function PanelModal({ panel, onClose }: { panel: Panel; onClose: () => void }) {
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr,220px] gap-5 items-start">
           {/* Left: text */}
           <div>
-            {/* ⬇️ Replaces the old single <ul> */}
             {sections.map((sec, i) => (
               <div key={i} className={i > 0 ? 'mt-3' : ''}>
                 {sec.title && (
