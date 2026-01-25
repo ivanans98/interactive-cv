@@ -19,10 +19,11 @@ export const PANELS: Panel[] = [
       "Make yourself at home, explore the rooms, and keep an eye out for my two fluffy sidekicks. 🐾"
     ],
     ctas: [{ label: "Classic CV", href: "/cv" }],
-
     imgUrl: "/ivana.png",
     imgAlt: "Ivana smiling"
   },
+
+  // ===== THE LAB: CURRENTLY WORKING ON =====
   {
     id: "lab",
     title: "This is my Creative Lab",
@@ -34,56 +35,72 @@ export const PANELS: Panel[] = [
     ],
     ctas: [{ label: "Homepage Mockup", href: "/home.png", external: true}],
   },
+
+  // ===== THE WORKSHOP: WORK EXPERIENCE
   {
     id: "workshop-techauto-thesis",
     title: "Working Student (Thesis)",
     bullets: [
-      "Focus: how AI + telematics can optimize robotic fleets (routing, reliability, uptime).",
-    "What I’m doing now: researching the space and running simulations on synthetic data to test which parameters we can extract, why they matter, and how they help fleet managers, drivers, and customers.",
-    "Outcome goal: decision tooling that’s explainable, not a black box — shipping as part of my B.Eng. thesis."
+      "Engineered a custom Discrete Event Simulation (DES) engine from scratch to model autonomous robotic fleets in warehouse environments.", 
+      "Implemented explicit state control loops (Idle → Working → Charging) to model physics-based battery degradation and thermal stress.",
+      "Built an analytics pipeline using Matplotlib/Pandas to perform A/B testing between 'Baseline' vs. 'AI-Inspired' task allocation policies.",
+      "Outcome: Demonstrated that predictive health monitoring reduces fleet failure rates significantly compared to reactive baselines."
     ],
+    chips: ["Python", "Pandas", "NetworkX", "Algorithm Design"],
+    ctas: [{ label: "View Code on GitHub", href: "https://github.com/ivanans98/fleet-simulation-engine", external: true }]
   },
+  
     {
     id: "workshop-techauto",
     title: "Tech-Auto Ltd (Intern, Jul–Sep 2025)",
     bullets: [
       "What I built: a modern B2C site to support an e-commerce pivot.",
       "How: lightweight WordPress theme, minimal plugins + a bit of custom code, optimized images, and caching/CDN for fast loads.",
-      "Impact: Lighthouse score jumped from 67 → 89; faster pages, lower bounce, easier updates for the team."
+      "Impact: Lighthouse score improved from 67 → 89; faster pages, lower bounce, easier updates for the team."
     ],
+      chips: ["Web Development", "Performance Optimization"]
     },
+  
   {
     id: "workshop-stabilus",
     title: "Stabilus",
     bullets: [
-      "Built Power BI dashboards fed from SAP data; MATLAB for data prep/cleanup.",
-      "Industry 4.0 work: measurement data pipelines, C# converters, LabVIEW interfaces.",
+      "What I built: Power BI dashboards fed from SAP data; MATLAB for data prep/cleanup.",
+      "Industry 4.0 impact: data pipelines measurement, C# converters, LabVIEW interfaces.",
       "Shipped multilingual reporting: migrated dashboards from German-only to English and Spanish as well."
     ],
+    chips: ["Data Engineering", "MATLAB", "Power BI", "C#"]
   },
+
+  // ===== THE STUDY (EDUCATION) =====
   {
     id: "study",
     title: "My Study Path 📚",
     bullets: [
-      "I’m finishing my B.Eng. in Mechatronics at Hochschule Koblenz 🎓",
-      "Right now I’m wrapping up my thesis: “From Data to Decisions: Optimizing Robotic Fleets with Telematics and Artificial Intelligence”. It focuses on how AI + telematics help robotic fleets make smarter choices (due Dec 29, 2025).",
+      "Graduated with a B.Eng. in Mechatronics at Hochschule Koblenz 🎓",
+      "Thesis Focus: “From Data to Decisions” — It focuses on how AI + telematics help robotic fleets make smarter choices (due Dec 29, 2025).",
       "If you're interested in web design, UML diagrams, and AI, take a look at my previous work 👇"
     ],
     ctas: [
+      { label: "From Data to Decisions", href: "/papers/bachelorarbeit.pdf" },
       { label: "ChatGPT in Software Development", href: "/papers/studienarbeit.pdf" },
       { label: "Modernizing Tech-Auto’s Digital Presence", href: "/papers/praxisphase.pdf" }
     ]
   },
+
+  // ===== THE LIBRARY (SKILLS) =====
   {
     id: "library",
     title: "Technical Skills",
     bullets: [
-      "Languages & Dev: Java, Kotlin, Python, C/C#, C/C++, Android Studio.",
-      "Data & BI: MATLAB, Power BI, Looker Studio, SAP.",
+      "Core Languages: Java, Kotlin, Python, C/C#/C++.",
+      "Data & Analytics: MATLAB, Power BI, Looker Studio, SAP, SQL.",
       "PM & Collab: Jira, Asana, Slack, Figma, Git/GitHub.",
       "Automation & Eng: LabVIEW, CODESYS, Siemens Step7."
     ]
   },
+
+  // ===== COFFEE (PERSONAL) =====
   {
     id: "coffee",
     title: "Enjoy a coffee with me ☕",
@@ -97,22 +114,25 @@ export const PANELS: Panel[] = [
       "I love good conversations and a great cup of coffee. So always happy to chat!"
     ],
     ctas: [
-    { label: "Email", href: "mailto:inavarretesanteliz@gmail.com" },
+    { label: "Email Me", href: "mailto:inavarretesanteliz@gmail.com" },
     { label: "LinkedIn", href: "https://www.linkedin.com/in/ivana-navarrete-santeliz", external: true }]
   },
+
+  // ===== GARDEN (CREDITS) =====
   {
     id: "garden",
     title: "Thanks for visiting 🌿",
     bullets: [
-      "Thanks for taking the time to explore my home — I hope you got to know me a little better (and spotted Cookie & Belle 🐾).",
-    "Built with: Next.js (App Router), React, TypeScript, and Tailwind CSS.",
-    "Canvas mini-world: movement, collisions, hotspots, and a tiny dialogue system.",
-    "Art & rendering: one 16×16 tilesheet drawn at 32×32; props are floor-anchored so scaling keeps them ‘on the ground’." 
+      "Thanks for taking the time to explore my digital home — I hope you got to know me a little better (and spotted Cookie & Belle 🐾).",
+      "How it works: Built with React, TypeScript, and the HTML5 Canvas API.",
+      "Under the hood: Custom collision detection (AABB), sprite animation loops, and React hooks for game state management.",
+      "Art: 16-bit pixel art scaled for that retro cozy feel."
     ],
+    ctas: [{label: "View Portfolio Source", href: "https://github.com/ivanans98/interactive-cv", external: true}]
   }
 ];
 
-// Build a single “workshop” view by merging all workshop-* entries.
+// Logic to merge "workshop" entries into one view
 export const getPanel = (id: string) => {
   if (id === 'workshop') {
     const subs = PANELS.filter(p => p.id.startsWith('workshop-'));
