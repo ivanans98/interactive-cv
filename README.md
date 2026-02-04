@@ -1,42 +1,68 @@
-# Portfolio Blog Starter
+# 🏡 The Cozy House – Interactive RPG Portfolio
 
-This is a porfolio site template complete with a blog. Includes:
+A gamified personal portfolio built from scratch using **React**, **TypeScript**, and the **HTML5 Canvas API**. 
 
-- MDX and Markdown support
-- Optimized for SEO (sitemap, robots, JSON-LD schema)
-- RSS Feed
-- Dynamic OG images
-- Syntax highlighting
-- Tailwind v4
-- Vercel Speed Insights / Web Analytics
-- Geist font
+Instead of a traditional static resume, users can explore a 2D pixel-art world, interacting with objects (like the bookshelf for projects or the laptop for skills) to learn about my professional background.
 
-## Demo
+**[🚀 Live Demo](https://www.ivananavarretesanteliz.com/)**
 
-https://portfolio-blog-starter.vercel.app
+## 🛠 Tech Stack
 
-## How to Use
+* **Framework:** [Next.js](https://nextjs.org/) / React 18
+* **Language:** TypeScript
+* **Rendering Engine:** HTML5 Canvas API
+* **Styling:** Tailwind CSS
+* **Deployment:** Vercel
 
-You can choose from one of the following two methods to use this repository:
+## ✨ Key Features
 
-### One-Click Deploy
+* **Custom Game Engine:** A `requestAnimationFrame` game loop handling physics, updates, and rendering at 60fps.
+* **Collision Detection:** AABB (Axis-Aligned Bounding Box) logic for wall collisions and object interaction.
+* **Responsive Controls:**
+    * **Desktop:** WASD / Arrow Keys support.
+    * **Mobile:** Custom on-screen D-Pad and interaction buttons with multi-touch support.
+* **Dynamic Asset Loading:** Asynchronous pre-loading of sprite sheets and props to ensure smooth gameplay.
+* **Programmatic Sprites:** The main character and NPCs are generated code-side using Canvas primitives, allowing for dynamic color changes without external image files.
 
-Deploy the example using [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=vercel-examples):
+## 🧩 Technical Highlights
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/solutions/blog&project-name=blog&repository-name=blog)
+### 1. The Game Loop
+Unlike typical React apps that rely on the DOM, this project uses a `useRef` to access a `<canvas>` element. The rendering logic is decoupled from React's render cycle to ensure high performance.
 
-### Clone and Deploy
+```typescript
+// Simplified logic from the main loop
+const step = () => {
+  // 1. Calculate next position based on velocity
+  let nx = px + vx * SPEED;
+  let ny = py + vy * SPEED;
 
-Execute [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app) with [pnpm](https://pnpm.io/installation) to bootstrap the example:
+  // 2. Check collisions (AABB & Tile Map)
+  if (!isWall(nx, py)) setPx(nx);
+  if (!isWall(px, ny)) setPy(ny);
 
-```bash
-pnpm create next-app --example https://github.com/vercel/examples/tree/main/solutions/blog blog
+  // 3. Draw frame
+  draw();
+  requestAnimationFrame(step);
+};
 ```
 
-Then, run Next.js in development mode:
+### 2. Tile-Based Mapping
+The world is constructed using a coordinate grid system. Walls and obstacles are mapped in a binary array (MAP), allowing for efficient O(1) lookup times during collision checks.
 
-```bash
-pnpm dev
+### 3. Interaction System
+A proximity check runs on every frame. If the player is within range of a "Hotspot" (defined as a Rect object), an interaction prompt appears.
+
+```typescript
+const interact = () => {
+  // Check proximity to NPCs
+  for (const c of CATS) {
+    if (Math.hypot(px - c.x, py - c.y) < 28) {
+      setOpenLine(`${c.line} — ${c.name}`);
+      return;
+    }
+  }
+  // Check Hotspots (Projects, Skills, etc.)
+  const hit = HOTSPOTS.find(h => aabb(tx, ty, 1, 1, h.rect.x, h.rect.y, h.rect.w, h.rect.h));
+  if (hit) setOpenPanel(getPanel(hit.id));
+};
 ```
-
-Deploy it to the cloud with [Vercel](https://vercel.com/templates) ([Documentation](https://nextjs.org/docs/app/building-your-application/deploying)).
